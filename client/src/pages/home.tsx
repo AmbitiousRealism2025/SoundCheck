@@ -9,10 +9,11 @@ import { FloatingActionButton } from "@/components/floating-action-button";
 import { RehearsalFormModal } from "@/components/rehearsal-form-modal";
 import { GigFormModal } from "@/components/gig-form-modal";
 import { EarningsTracker } from "@/components/earnings-tracker";
+import { CalendarView } from "@/components/calendar-view";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import type { RehearsalWithTasks, Gig } from "@shared/schema";
 
-type Tab = "rehearsals" | "gigs" | "earnings";
+type Tab = "rehearsals" | "gigs" | "earnings" | "calendar";
 
 export default function Home() {
   const [currentTab, setCurrentTab] = useState<Tab>("rehearsals");
@@ -21,6 +22,7 @@ export default function Home() {
   const [showGigModal, setShowGigModal] = useState(false);
   const [editingRehearsal, setEditingRehearsal] = useState<RehearsalWithTasks | null>(null);
   const [editingGig, setEditingGig] = useState<Gig | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   
   const [onboardingCompleted, setOnboardingCompleted] = useLocalStorage(
     "soundcheck-onboarding-completed",
@@ -57,8 +59,9 @@ export default function Home() {
     setOnboardingCompleted(true);
   };
 
-  const handleCreateRehearsal = () => {
+  const handleCreateRehearsal = (initialDate?: Date) => {
     setEditingRehearsal(null);
+    setSelectedDate(initialDate || null);
     setShowRehearsalModal(true);
   };
 
@@ -67,8 +70,9 @@ export default function Home() {
     setShowRehearsalModal(true);
   };
 
-  const handleCreateGig = () => {
+  const handleCreateGig = (initialDate?: Date) => {
     setEditingGig(null);
+    setSelectedDate(initialDate || null);
     setShowGigModal(true);
   };
 
@@ -164,6 +168,17 @@ export default function Home() {
             >
               Earnings
             </button>
+            <button
+              onClick={() => setCurrentTab("calendar")}
+              className={`flex-1 py-3 px-4 text-center font-medium text-sm transition-colors ${
+                currentTab === "calendar"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`}
+              data-testid="tab-calendar"
+            >
+              Calendar
+            </button>
           </div>
         </nav>
 
@@ -235,6 +250,19 @@ export default function Home() {
               <EarningsTracker gigs={gigs} isLoading={gigsLoading} />
             </div>
           )}
+
+          {/* Calendar Tab */}
+          {currentTab === "calendar" && (
+            <div className="p-4" data-testid="calendar-content">
+              <CalendarView
+                rehearsals={rehearsals}
+                gigs={gigs}
+                isLoading={rehearsalsLoading || gigsLoading}
+                onCreateRehearsal={handleCreateRehearsal}
+                onCreateGig={handleCreateGig}
+              />
+            </div>
+          )}
         </main>
 
         {/* Floating Action Button */}
@@ -252,14 +280,22 @@ export default function Home() {
 
       <RehearsalFormModal
         open={showRehearsalModal}
-        onClose={() => setShowRehearsalModal(false)}
+        onClose={() => {
+          setShowRehearsalModal(false);
+          setSelectedDate(null);
+        }}
         rehearsal={editingRehearsal}
+        initialDate={selectedDate}
       />
 
       <GigFormModal
         open={showGigModal}
-        onClose={() => setShowGigModal(false)}
+        onClose={() => {
+          setShowGigModal(false);
+          setSelectedDate(null);
+        }}
         gig={editingGig}
+        initialDate={selectedDate}
       />
     </>
   );

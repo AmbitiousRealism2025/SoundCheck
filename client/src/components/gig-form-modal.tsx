@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { format } from "date-fns";
 import { X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -27,9 +28,10 @@ interface GigFormModalProps {
   open: boolean;
   onClose: () => void;
   gig?: Gig | null;
+  initialDate?: Date | null;
 }
 
-export function GigFormModal({ open, onClose, gig }: GigFormModalProps) {
+export function GigFormModal({ open, onClose, gig, initialDate }: GigFormModalProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const isEditing = !!gig;
@@ -159,13 +161,13 @@ export function GigFormModal({ open, onClose, gig }: GigFormModalProps) {
   useEffect(() => {
     if (gig && open) {
       const gigDate = new Date(gig.date);
-      const dateString = gigDate.toISOString().split('T')[0];
-      const timeString = gigDate.toTimeString().slice(0, 5);
+      const dateString = format(gigDate, 'yyyy-MM-dd');
+      const timeString = format(gigDate, 'HH:mm');
       
       let callTimeString = "";
       if (gig.callTime) {
         const callTime = new Date(gig.callTime);
-        callTimeString = callTime.toTimeString().slice(0, 5);
+        callTimeString = format(callTime, 'HH:mm');
       }
 
       form.reset({
@@ -179,18 +181,21 @@ export function GigFormModal({ open, onClose, gig }: GigFormModalProps) {
         notes: gig.notes || "",
       });
     } else if (open && !gig) {
+      // Set initial date if provided, otherwise use empty values
+      const dateString = initialDate ? format(initialDate, 'yyyy-MM-dd') : "";
+      
       form.reset({
         venueName: "",
         venueAddress: "",
         venueContact: "",
-        date: "",
+        date: dateString,
         time: "",
         callTimeInput: "",
         compensationInput: "",
         notes: "",
       });
     }
-  }, [gig, open, form]);
+  }, [gig, open, initialDate, form]);
 
   const handleSubmit = (data: FormData) => {
     if (isEditing) {

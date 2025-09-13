@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { format } from "date-fns";
 import { X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -25,9 +26,10 @@ interface RehearsalFormModalProps {
   open: boolean;
   onClose: () => void;
   rehearsal?: RehearsalWithTasks | null;
+  initialDate?: Date | null;
 }
 
-export function RehearsalFormModal({ open, onClose, rehearsal }: RehearsalFormModalProps) {
+export function RehearsalFormModal({ open, onClose, rehearsal, initialDate }: RehearsalFormModalProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const isEditing = !!rehearsal;
@@ -133,8 +135,8 @@ export function RehearsalFormModal({ open, onClose, rehearsal }: RehearsalFormMo
   useEffect(() => {
     if (rehearsal && open) {
       const rehearsalDate = new Date(rehearsal.date);
-      const dateString = rehearsalDate.toISOString().split('T')[0];
-      const timeString = rehearsalDate.toTimeString().slice(0, 5);
+      const dateString = format(rehearsalDate, 'yyyy-MM-dd');
+      const timeString = format(rehearsalDate, 'HH:mm');
 
       form.reset({
         eventName: rehearsal.eventName,
@@ -143,14 +145,17 @@ export function RehearsalFormModal({ open, onClose, rehearsal }: RehearsalFormMo
         time: timeString,
       });
     } else if (open && !rehearsal) {
+      // Set initial date if provided, otherwise use empty values
+      const dateString = initialDate ? format(initialDate, 'yyyy-MM-dd') : "";
+      
       form.reset({
         eventName: "",
         location: "",
-        date: "",
+        date: dateString,
         time: "",
       });
     }
-  }, [rehearsal, open, form]);
+  }, [rehearsal, open, initialDate, form]);
 
   const handleSubmit = (data: FormData) => {
     if (isEditing) {
