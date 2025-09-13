@@ -105,15 +105,13 @@ export async function setupAuth(app: Express) {
   const config = await getConfig();
 
   for (const domain of process.env.REPLIT_DOMAINS!.split(",")) {
-    // Create strategy with proper redirect_uri in params
+    // Create strategy with callbackURL instead of params (params not supported in this version)
     const redirectUri = `https://${domain}/api/callback`;
     const strategy = new Strategy(
       {
         config,
-        params: {
-          redirect_uri: redirectUri,
-          scope: 'openid email profile offline_access',
-        },
+        callbackURL: redirectUri,
+        scope: 'openid email profile offline_access',
       },
       (tokenSet: any, done: any) => {
         // Simplified verify function with just 2 parameters
