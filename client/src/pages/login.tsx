@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Music, Mail, Lock, User } from "lucide-react"
+import { useState, useEffect } from 'react'
+import { Music, Mail, Lock, User, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,6 +15,25 @@ export default function Login() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  // Check for URL parameters on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const message = params.get('message')
+    const errorParam = params.get('error')
+
+    if (message) {
+      setSuccess(message)
+      // Clear the URL
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+
+    if (errorParam) {
+      setError(errorParam)
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -58,7 +77,7 @@ export default function Login() {
         window.location.reload()
       } else if (isSignUp && data.user) {
         // Email confirmation required
-        setError('Please check your email to confirm your account before logging in')
+        setError('Please check your email to confirm your account. Note: For development, you may need to update the redirect URL in Supabase settings to http://localhost:3001')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -152,6 +171,13 @@ export default function Login() {
                 />
               </div>
             </div>
+
+            {success && (
+              <div className="text-sm text-green-600 bg-green-50 p-3 rounded-md flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" />
+                {success}
+              </div>
+            )}
 
             {error && (
               <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">

@@ -33,7 +33,9 @@ export async function setupAuth(app: any) {
             first_name: firstName,
             last_name: lastName,
           },
-          emailRedirectTo: undefined
+          emailRedirectTo: `${req.protocol}://${req.get('host')}/`,
+          // Skip email confirmation for development
+          noConfirmEmail: true
         }
       })
 
@@ -52,6 +54,33 @@ export async function setupAuth(app: any) {
       }
 
       console.log('Signup successful:', { user: data.user, session: !!data.session })
+
+      // For development, if no session was created (email confirmation required),
+      // automatically sign in the user
+      if (!data.session && data.user) {
+        console.log('Auto-signing in user for development...')
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        })
+
+        if (signInError) {
+          console.log('Auto-signin failed:', signInError)
+          // Return the original signup response
+          return res.json({
+            message: 'Signup successful',
+            user: data.user,
+            session: null
+          })
+        }
+
+        console.log('Auto-signin successful')
+        return res.json({
+          message: 'Signup successful',
+          user: signInData.user,
+          session: signInData.session
+        })
+      }
 
       res.json({
         message: 'Signup successful',
@@ -106,6 +135,24 @@ export async function setupAuth(app: any) {
     const redirectUrl = `${req.protocol}://${req.get('host')}/auth/callback`
     const authUrl = `https://dzafkwqhzeinbzgwbfwv.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`
     res.redirect(authUrl)
+  })
+
+  // Email confirmation callback handler
+  app.get('/auth/callback', async (req, res) => {
+    try {
+      const { error } = await supabase.auth.getSession()
+
+      if (error) {
+        console.error('Error getting session after confirmation:', error)
+        return res.redirect('/login?error=Could not confirm email')
+      }
+
+      // Email confirmed successfully, redirect to login page with success message
+      res.redirect('/login?message=Email confirmed successfully! Please log in.')
+    } catch (error) {
+      console.error('Email confirmation error:', error)
+      res.redirect('/login?error=Confirmation failed')
+    }
   })
 }
 
