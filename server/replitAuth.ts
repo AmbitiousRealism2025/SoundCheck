@@ -7,9 +7,19 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
-if (!process.env.REPLIT_DOMAINS) {
-  throw new Error("Environment variable REPLIT_DOMAINS not provided");
+// Validate required environment variables at startup
+function validateEnvironment() {
+  const required = ['REPLIT_DOMAINS', 'REPL_ID', 'SESSION_SECRET', 'DATABASE_URL'];
+  const missing = required.filter(key => !process.env[key]);
+  
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+  
+  console.log(`Auth configured for domains: ${process.env.REPLIT_DOMAINS}`);
 }
+
+validateEnvironment();
 
 // Define TokenSet interface for v6.x compatibility
 interface TokenSet {
@@ -138,9 +148,14 @@ export async function setupAuth(app: Express) {
   app.get("/api/logout", async (req: any, res) => {
     try {
       const client = await getClient();
+      
+      // Use X-Forwarded headers for proxy compatibility
+      const protocol = req.get('X-Forwarded-Proto') || req.protocol;
+      const host = req.get('X-Forwarded-Host') || req.hostname;
+      
       const logoutUrl = client.endSessionUrl({
         id_token_hint: req.user?.id_token,
-        post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
+        post_logout_redirect_uri: `${protocol}://${host}`,
       });
       req.logout(() => {
         res.redirect(logoutUrl.toString());
@@ -176,7 +191,15 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     const client = await getClient();
     const tokenSet = await client.refresh(refreshToken);
     updateUserSession(user, tokenSet as TokenSet);
-    return next();
+    
+    // Persist refreshed tokens to session
+    req.login(user, (err) => {
+      if (err) {
+        console.error("Session persistence error:", err);
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      return next();
+    });
   } catch (error) {
     console.error("Token refresh error:", error);
     res.status(401).json({ message: "Unauthorized" });
