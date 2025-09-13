@@ -7,27 +7,27 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
 
-  // Rehearsals
-  getRehearsals(): Promise<RehearsalWithTasks[]>;
-  getRehearsal(id: string): Promise<RehearsalWithTasks | undefined>;
-  createRehearsal(rehearsal: InsertRehearsal): Promise<Rehearsal>;
-  updateRehearsal(id: string, rehearsal: Partial<InsertRehearsal>): Promise<Rehearsal | undefined>;
-  deleteRehearsal(id: string): Promise<boolean>;
+  // Rehearsals (user-scoped)
+  getRehearsals(userId: string): Promise<RehearsalWithTasks[]>;
+  getRehearsal(id: string, userId: string): Promise<RehearsalWithTasks | undefined>;
+  createRehearsal(rehearsal: InsertRehearsal, userId: string): Promise<Rehearsal>;
+  updateRehearsal(id: string, rehearsal: Partial<InsertRehearsal>, userId: string): Promise<Rehearsal | undefined>;
+  deleteRehearsal(id: string, userId: string): Promise<boolean>;
 
-  // Tasks
-  getTasks(rehearsalId: string): Promise<Task[]>;
-  getTask(id: string): Promise<Task | undefined>;
-  createTask(task: InsertTask): Promise<Task>;
-  updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined>;
-  deleteTask(id: string): Promise<boolean>;
-  reorderTasks(rehearsalId: string, taskIds: string[]): Promise<Task[]>;
+  // Tasks (user-scoped)
+  getTasks(rehearsalId: string, userId: string): Promise<Task[]>;
+  getTask(id: string, userId: string): Promise<Task | undefined>;
+  createTask(task: InsertTask, userId: string): Promise<Task>;
+  updateTask(id: string, task: Partial<InsertTask>, userId: string): Promise<Task | undefined>;
+  deleteTask(id: string, userId: string): Promise<boolean>;
+  reorderTasks(rehearsalId: string, taskIds: string[], userId: string): Promise<Task[]>;
 
-  // Gigs
-  getGigs(): Promise<Gig[]>;
-  getGig(id: string): Promise<Gig | undefined>;
-  createGig(gig: InsertGig): Promise<Gig>;
-  updateGig(id: string, gig: Partial<InsertGig>): Promise<Gig | undefined>;
-  deleteGig(id: string): Promise<boolean>;
+  // Gigs (user-scoped)
+  getGigs(userId: string): Promise<Gig[]>;
+  getGig(id: string, userId: string): Promise<Gig | undefined>;
+  createGig(gig: InsertGig, userId: string): Promise<Gig>;
+  updateGig(id: string, gig: Partial<InsertGig>, userId: string): Promise<Gig | undefined>;
+  deleteGig(id: string, userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -52,133 +52,143 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  // Rehearsals
-  async getRehearsals(): Promise<RehearsalWithTasks[]> {
-    const rehearsalList = await db.select().from(rehearsals).orderBy(asc(rehearsals.date));
+  // Rehearsals (user-scoped)
+  async getRehearsals(userId: string): Promise<RehearsalWithTasks[]> {
+    const rehearsalList = await db.select().from(rehearsals)
+      .where(eq(rehearsals.userId, userId))
+      .orderBy(asc(rehearsals.date));
     
     const rehearsalsWithTasks = await Promise.all(
       rehearsalList.map(async (rehearsal) => ({
         ...rehearsal,
-        tasks: await this.getTasks(rehearsal.id),
+        tasks: await this.getTasks(rehearsal.id, userId),
       }))
     );
     
     return rehearsalsWithTasks;
   }
 
-  async getRehearsal(id: string): Promise<RehearsalWithTasks | undefined> {
-    const [rehearsal] = await db.select().from(rehearsals).where(eq(rehearsals.id, id));
+  async getRehearsal(id: string, userId: string): Promise<RehearsalWithTasks | undefined> {
+    const [rehearsal] = await db.select().from(rehearsals)
+      .where(and(eq(rehearsals.id, id), eq(rehearsals.userId, userId)));
     if (!rehearsal) return undefined;
 
-    const rehearsalTasks = await this.getTasks(id);
+    const rehearsalTasks = await this.getTasks(id, userId);
     return { ...rehearsal, tasks: rehearsalTasks };
   }
 
-  async createRehearsal(insertRehearsal: InsertRehearsal): Promise<Rehearsal> {
+  async createRehearsal(insertRehearsal: InsertRehearsal, userId: string): Promise<Rehearsal> {
     const [rehearsal] = await db
       .insert(rehearsals)
-      .values(insertRehearsal)
+      .values({ ...insertRehearsal, userId })
       .returning();
     return rehearsal;
   }
 
-  async updateRehearsal(id: string, updateData: Partial<InsertRehearsal>): Promise<Rehearsal | undefined> {
+  async updateRehearsal(id: string, updateData: Partial<InsertRehearsal>, userId: string): Promise<Rehearsal | undefined> {
     const [updated] = await db
       .update(rehearsals)
       .set(updateData)
-      .where(eq(rehearsals.id, id))
+      .where(and(eq(rehearsals.id, id), eq(rehearsals.userId, userId)))
       .returning();
     return updated || undefined;
   }
 
-  async deleteRehearsal(id: string): Promise<boolean> {
-    // Delete associated tasks first
-    await db.delete(tasks).where(eq(tasks.rehearsalId, id));
+  async deleteRehearsal(id: string, userId: string): Promise<boolean> {
+    // Delete associated tasks first (user-scoped)
+    await db.delete(tasks).where(and(eq(tasks.rehearsalId, id), eq(tasks.userId, userId)));
     
-    const result = await db.delete(rehearsals).where(eq(rehearsals.id, id));
+    const result = await db.delete(rehearsals)
+      .where(and(eq(rehearsals.id, id), eq(rehearsals.userId, userId)));
     return (result.rowCount ?? 0) > 0;
   }
 
-  // Tasks
-  async getTasks(rehearsalId: string): Promise<Task[]> {
+  // Tasks (user-scoped)
+  async getTasks(rehearsalId: string, userId: string): Promise<Task[]> {
     const taskList = await db
       .select()
       .from(tasks)
-      .where(eq(tasks.rehearsalId, rehearsalId))
+      .where(and(eq(tasks.rehearsalId, rehearsalId), eq(tasks.userId, userId)))
       .orderBy(asc(tasks.order));
     return taskList;
   }
 
-  async getTask(id: string): Promise<Task | undefined> {
-    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+  async getTask(id: string, userId: string): Promise<Task | undefined> {
+    const [task] = await db.select().from(tasks)
+      .where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
     return task || undefined;
   }
 
-  async createTask(insertTask: InsertTask): Promise<Task> {
+  async createTask(insertTask: InsertTask, userId: string): Promise<Task> {
     const [task] = await db
       .insert(tasks)
-      .values(insertTask)
+      .values({ ...insertTask, userId })
       .returning();
     return task;
   }
 
-  async updateTask(id: string, updateData: Partial<InsertTask>): Promise<Task | undefined> {
+  async updateTask(id: string, updateData: Partial<InsertTask>, userId: string): Promise<Task | undefined> {
     const [updated] = await db
       .update(tasks)
       .set(updateData)
-      .where(eq(tasks.id, id))
+      .where(and(eq(tasks.id, id), eq(tasks.userId, userId)))
       .returning();
     return updated || undefined;
   }
 
-  async deleteTask(id: string): Promise<boolean> {
-    const result = await db.delete(tasks).where(eq(tasks.id, id));
+  async deleteTask(id: string, userId: string): Promise<boolean> {
+    const result = await db.delete(tasks)
+      .where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
     return (result.rowCount ?? 0) > 0;
   }
 
-  async reorderTasks(rehearsalId: string, taskIds: string[]): Promise<Task[]> {
+  async reorderTasks(rehearsalId: string, taskIds: string[], userId: string): Promise<Task[]> {
     // Update each task's order based on position in taskIds array
     await Promise.all(
       taskIds.map((taskId, index) =>
         db.update(tasks)
           .set({ order: index })
-          .where(and(eq(tasks.id, taskId), eq(tasks.rehearsalId, rehearsalId)))
+          .where(and(eq(tasks.id, taskId), eq(tasks.rehearsalId, rehearsalId), eq(tasks.userId, userId)))
       )
     );
 
-    return this.getTasks(rehearsalId);
+    return this.getTasks(rehearsalId, userId);
   }
 
-  // Gigs
-  async getGigs(): Promise<Gig[]> {
-    const gigList = await db.select().from(gigs).orderBy(asc(gigs.date));
+  // Gigs (user-scoped)
+  async getGigs(userId: string): Promise<Gig[]> {
+    const gigList = await db.select().from(gigs)
+      .where(eq(gigs.userId, userId))
+      .orderBy(asc(gigs.date));
     return gigList;
   }
 
-  async getGig(id: string): Promise<Gig | undefined> {
-    const [gig] = await db.select().from(gigs).where(eq(gigs.id, id));
+  async getGig(id: string, userId: string): Promise<Gig | undefined> {
+    const [gig] = await db.select().from(gigs)
+      .where(and(eq(gigs.id, id), eq(gigs.userId, userId)));
     return gig || undefined;
   }
 
-  async createGig(insertGig: InsertGig): Promise<Gig> {
+  async createGig(insertGig: InsertGig, userId: string): Promise<Gig> {
     const [gig] = await db
       .insert(gigs)
-      .values(insertGig)
+      .values({ ...insertGig, userId })
       .returning();
     return gig;
   }
 
-  async updateGig(id: string, updateData: Partial<InsertGig>): Promise<Gig | undefined> {
+  async updateGig(id: string, updateData: Partial<InsertGig>, userId: string): Promise<Gig | undefined> {
     const [updated] = await db
       .update(gigs)
       .set(updateData)
-      .where(eq(gigs.id, id))
+      .where(and(eq(gigs.id, id), eq(gigs.userId, userId)))
       .returning();
     return updated || undefined;
   }
 
-  async deleteGig(id: string): Promise<boolean> {
-    const result = await db.delete(gigs).where(eq(gigs.id, id));
+  async deleteGig(id: string, userId: string): Promise<boolean> {
+    const result = await db.delete(gigs)
+      .where(and(eq(gigs.id, id), eq(gigs.userId, userId)));
     return (result.rowCount ?? 0) > 0;
   }
 }

@@ -27,6 +27,7 @@ export const users = pgTable("users", {
 
 export const rehearsals = pgTable("rehearsals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
   eventName: text("event_name").notNull(),
   date: timestamp("date").notNull(),
   location: text("location").notNull(),
@@ -35,6 +36,7 @@ export const rehearsals = pgTable("rehearsals", {
 
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
   rehearsalId: varchar("rehearsal_id").notNull(),
   title: text("title").notNull(),
   note: text("note"),
@@ -45,6 +47,7 @@ export const tasks = pgTable("tasks", {
 
 export const gigs = pgTable("gigs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
   date: timestamp("date").notNull(),
   callTime: timestamp("call_time"),
   venueName: text("venue_name").notNull(),
@@ -58,6 +61,7 @@ export const gigs = pgTable("gigs", {
 export const insertRehearsalSchema = createInsertSchema(rehearsals).omit({
   id: true,
   createdAt: true,
+  userId: true, // Server sets userId from auth
 }).extend({
   date: z.string().transform(val => new Date(val)),
 });
@@ -65,11 +69,13 @@ export const insertRehearsalSchema = createInsertSchema(rehearsals).omit({
 export const insertTaskSchema = createInsertSchema(tasks).omit({
   id: true,
   createdAt: true,
+  userId: true, // Server sets userId from auth
 });
 
 export const insertGigSchema = createInsertSchema(gigs).omit({
   id: true,
   createdAt: true,
+  userId: true, // Server sets userId from auth
 }).extend({
   date: z.string().transform(val => new Date(val)),
   callTime: z.string().optional().transform(val => val ? new Date(val) : null),
