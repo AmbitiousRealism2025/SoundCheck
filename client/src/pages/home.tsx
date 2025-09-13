@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Music, HelpCircle } from "lucide-react";
+import { Music, HelpCircle, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { OnboardingTutorial } from "@/components/onboarding-tutorial";
 import { RehearsalCard } from "@/components/rehearsal-card";
 import { GigCard } from "@/components/gig-card";
@@ -105,13 +106,24 @@ export default function Home() {
               </div>
               <h1 className="text-xl font-bold" data-testid="text-app-title">SoundCheck</h1>
             </div>
-            <button
-              onClick={() => setShowOnboarding(true)}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-              data-testid="button-help"
-            >
-              <HelpCircle className="w-5 h-5" />
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setShowOnboarding(true)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="button-help"
+              >
+                <HelpCircle className="w-5 h-5" />
+              </button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.location.href = "/api/logout"}
+                className="text-muted-foreground hover:text-foreground"
+                data-testid="button-logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </header>
 

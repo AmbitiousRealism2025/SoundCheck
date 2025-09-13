@@ -2,10 +2,26 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertRehearsalSchema, insertTaskSchema, insertGigSchema } from "@shared/schema";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Rehearsals routes
-  app.get("/api/rehearsals", async (req, res) => {
+  // Auth middleware setup
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Rehearsals routes (protected)
+  app.get("/api/rehearsals", isAuthenticated, async (req, res) => {
     try {
       const rehearsals = await storage.getRehearsals();
       res.json(rehearsals);
@@ -14,7 +30,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/rehearsals/:id", async (req, res) => {
+  app.get("/api/rehearsals/:id", isAuthenticated, async (req, res) => {
     try {
       const rehearsal = await storage.getRehearsal(req.params.id);
       if (!rehearsal) {
@@ -26,7 +42,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/rehearsals", async (req, res) => {
+  app.post("/api/rehearsals", isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertRehearsalSchema.parse(req.body);
       const rehearsal = await storage.createRehearsal(validatedData);
@@ -36,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/rehearsals/:id", async (req, res) => {
+  app.put("/api/rehearsals/:id", isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertRehearsalSchema.partial().parse(req.body);
       const rehearsal = await storage.updateRehearsal(req.params.id, validatedData);
@@ -49,7 +65,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/rehearsals/:id", async (req, res) => {
+  app.delete("/api/rehearsals/:id", isAuthenticated, async (req, res) => {
     try {
       const success = await storage.deleteRehearsal(req.params.id);
       if (!success) {
@@ -61,8 +77,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Tasks routes
-  app.post("/api/rehearsals/:rehearsalId/tasks", async (req, res) => {
+  // Tasks routes (protected)
+  app.post("/api/rehearsals/:rehearsalId/tasks", isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertTaskSchema.parse({
         ...req.body,
@@ -75,7 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/tasks/:id", async (req, res) => {
+  app.put("/api/tasks/:id", isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertTaskSchema.partial().parse(req.body);
       const task = await storage.updateTask(req.params.id, validatedData);
@@ -88,7 +104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/tasks/:id", async (req, res) => {
+  app.delete("/api/tasks/:id", isAuthenticated, async (req, res) => {
     try {
       const success = await storage.deleteTask(req.params.id);
       if (!success) {
@@ -100,7 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/rehearsals/:rehearsalId/tasks/reorder", async (req, res) => {
+  app.post("/api/rehearsals/:rehearsalId/tasks/reorder", isAuthenticated, async (req, res) => {
     try {
       const { taskIds } = req.body;
       if (!Array.isArray(taskIds)) {
@@ -113,8 +129,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Gigs routes
-  app.get("/api/gigs", async (req, res) => {
+  // Gigs routes (protected)
+  app.get("/api/gigs", isAuthenticated, async (req, res) => {
     try {
       const gigs = await storage.getGigs();
       res.json(gigs);
@@ -123,7 +139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/gigs/:id", async (req, res) => {
+  app.get("/api/gigs/:id", isAuthenticated, async (req, res) => {
     try {
       const gig = await storage.getGig(req.params.id);
       if (!gig) {
@@ -135,7 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/gigs", async (req, res) => {
+  app.post("/api/gigs", isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertGigSchema.parse(req.body);
       const gig = await storage.createGig(validatedData);
@@ -145,7 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/gigs/:id", async (req, res) => {
+  app.put("/api/gigs/:id", isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertGigSchema.partial().parse(req.body);
       const gig = await storage.updateGig(req.params.id, validatedData);
@@ -158,7 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/gigs/:id", async (req, res) => {
+  app.delete("/api/gigs/:id", isAuthenticated, async (req, res) => {
     try {
       const success = await storage.deleteGig(req.params.id);
       if (!success) {

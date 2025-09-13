@@ -1,8 +1,12 @@
-import { type Rehearsal, type Task, type Gig, type InsertRehearsal, type InsertTask, type InsertGig, type RehearsalWithTasks, rehearsals, tasks, gigs } from "@shared/schema";
+import { type Rehearsal, type Task, type Gig, type InsertRehearsal, type InsertTask, type InsertGig, type RehearsalWithTasks, type User, type UpsertUser, rehearsals, tasks, gigs, users } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, asc } from "drizzle-orm";
 
 export interface IStorage {
+  // User operations (required for Replit Auth)
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+
   // Rehearsals
   getRehearsals(): Promise<RehearsalWithTasks[]>;
   getRehearsal(id: string): Promise<RehearsalWithTasks | undefined>;
@@ -27,6 +31,27 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // User operations (required for Replit Auth)
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
+  }
+
   // Rehearsals
   async getRehearsals(): Promise<RehearsalWithTasks[]> {
     const rehearsalList = await db.select().from(rehearsals).orderBy(asc(rehearsals.date));
