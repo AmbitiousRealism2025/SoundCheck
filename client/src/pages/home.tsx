@@ -8,10 +8,11 @@ import { GigCard } from "@/components/gig-card";
 import { FloatingActionButton } from "@/components/floating-action-button";
 import { RehearsalFormModal } from "@/components/rehearsal-form-modal";
 import { GigFormModal } from "@/components/gig-form-modal";
+import { EarningsTracker } from "@/components/earnings-tracker";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import type { RehearsalWithTasks, Gig } from "@shared/schema";
 
-type Tab = "rehearsals" | "gigs";
+type Tab = "rehearsals" | "gigs" | "earnings";
 
 export default function Home() {
   const [currentTab, setCurrentTab] = useState<Tab>("rehearsals");
@@ -132,7 +133,7 @@ export default function Home() {
           <div className="flex">
             <button
               onClick={() => setCurrentTab("rehearsals")}
-              className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
+              className={`flex-1 py-3 px-4 text-center font-medium text-sm transition-colors ${
                 currentTab === "rehearsals"
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -143,7 +144,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => setCurrentTab("gigs")}
-              className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
+              className={`flex-1 py-3 px-4 text-center font-medium text-sm transition-colors ${
                 currentTab === "gigs"
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -151,6 +152,17 @@ export default function Home() {
               data-testid="tab-gigs"
             >
               Gigs
+            </button>
+            <button
+              onClick={() => setCurrentTab("earnings")}
+              className={`flex-1 py-3 px-4 text-center font-medium text-sm transition-colors ${
+                currentTab === "earnings"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`}
+              data-testid="tab-earnings"
+            >
+              Earnings
             </button>
           </div>
         </nav>
@@ -214,6 +226,13 @@ export default function Home() {
                   />
                 ))
               )}
+            </div>
+          )}
+
+          {/* Earnings Tab */}
+          {currentTab === "earnings" && (
+            <div className="p-4" data-testid="earnings-content">
+              <EarningsTracker gigs={gigs} isLoading={gigsLoading} />
             </div>
           )}
         </main>
