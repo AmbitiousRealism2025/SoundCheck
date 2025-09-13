@@ -1,4 +1,5 @@
 import { type RequestHandler } from 'express'
+import { createClient } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 
 // Validate required environment variables at startup
@@ -33,9 +34,7 @@ export async function setupAuth(app: any) {
             first_name: firstName,
             last_name: lastName,
           },
-          emailRedirectTo: `${req.protocol}://${req.get('host')}/`,
-          // Skip email confirmation for development
-          noConfirmEmail: true
+          emailRedirectTo: `${req.protocol}://${req.get('host')}/`
         }
       })
 
@@ -56,29 +55,52 @@ export async function setupAuth(app: any) {
       console.log('Signup successful:', { user: data.user, session: !!data.session })
 
       // For development, if no session was created (email confirmation required),
-      // automatically sign in the user
+      // manually confirm the user and create a session
       if (!data.session && data.user) {
-        console.log('Auto-signing in user for development...')
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        })
+        console.log('Manually confirming user for development...')
 
-        if (signInError) {
-          console.log('Auto-signin failed:', signInError)
-          // Return the original signup response
-          return res.json({
-            message: 'Signup successful',
-            user: data.user,
-            session: null
-          })
+        try {
+          // Use admin client to confirm email
+          const supabaseAdmin = createClient(
+            process.env.SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+          )
+
+          // Update user to confirm email
+          const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+            data.user.id,
+            { email_confirm: true }
+          )
+
+          if (updateError) {
+            console.log('Failed to auto-confirm email:', updateError)
+          } else {
+            console.log('Email auto-confirmed successfully')
+
+            // Now try to sign in
+            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+              email,
+              password
+            })
+
+            if (!signInError && signInData.session) {
+              console.log('Auto-signin successful')
+              return res.json({
+                message: 'Signup successful',
+                user: signInData.user,
+                session: signInData.session
+              })
+            }
+          }
+        } catch (error) {
+          console.log('Auto-confirmation failed:', error)
         }
 
-        console.log('Auto-signin successful')
+        // Return the original signup response
         return res.json({
           message: 'Signup successful',
-          user: signInData.user,
-          session: signInData.session
+          user: data.user,
+          session: null
         })
       }
 
@@ -140,15 +162,81 @@ export async function setupAuth(app: any) {
   // Email confirmation callback handler
   app.get('/auth/callback', async (req, res) => {
     try {
-      const { error } = await supabase.auth.getSession()
+      console.log('Auth callback received:', req.query)
+
+      // Supabase sends access_token and refresh_token in the callback
+      const { access_token, refresh_token, type } = req.query
+
+      if (type === 'signup' || type === 'recovery') {
+        // For email confirmation, we need to exchange the tokens
+        if (access_token) {
+          const { data, error } = await supabase.auth.getUser(String(access_token))
+
+          if (error) {
+            console.error('Error getting user with access token:', error)
+            return res.redirect('/login?error=Invalid confirmation link')
+          }
+
+          if (data.user) {
+            console.log('Email confirmed for user:', data.user.email)
+
+            // Try to set the session
+            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+              access_token: String(access_token),
+              refresh_token: refresh_token ? String(refresh_token) : ''
+            })
+
+            if (sessionError) {
+              console.error('Error setting session:', sessionError)
+            }
+
+            // Redirect with success message and auto-login script
+            return res.send(`
+              <html>
+                <body>
+                  <h2>Email confirmed successfully!</h2>
+                  <p>You will be redirected to the application shortly...</p>
+                  <script>
+                    localStorage.setItem('supabase_token', '${access_token}');
+                    setTimeout(() => {
+                      window.location.href = '/';
+                    }, 2000);
+                  </script>
+                </body>
+              </html>
+            `)
+          }
+        }
+      }
+
+      // Fallback: try to get current session
+      const { data: sessionData, error } = await supabase.auth.getSession()
 
       if (error) {
         console.error('Error getting session after confirmation:', error)
         return res.redirect('/login?error=Could not confirm email')
       }
 
-      // Email confirmed successfully, redirect to login page with success message
-      res.redirect('/login?message=Email confirmed successfully! Please log in.')
+      if (sessionData.session) {
+        // Session exists, redirect to app
+        return res.send(`
+          <html>
+            <body>
+              <h2>Email confirmed successfully!</h2>
+              <p>You will be redirected to the application shortly...</p>
+              <script>
+                localStorage.setItem('supabase_token', '${sessionData.session.access_token}');
+                setTimeout(() => {
+                  window.location.href = '/';
+                }, 2000);
+              </script>
+            </body>
+          </html>
+        `)
+      }
+
+      // No session found
+      res.redirect('/login?message=Email confirmed! Please log in.')
     } catch (error) {
       console.error('Email confirmation error:', error)
       res.redirect('/login?error=Confirmation failed')
