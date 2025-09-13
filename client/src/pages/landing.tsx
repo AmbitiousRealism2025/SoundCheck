@@ -1,9 +1,12 @@
 import { Music, Calendar, Mic, MapPin, Star, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 
 export default function Landing() {
+  const [, navigate] = useLocation();
+
   const handleLogin = () => {
-    window.location.href = "/api/login";
+    navigate("/login");
   };
 
   return (

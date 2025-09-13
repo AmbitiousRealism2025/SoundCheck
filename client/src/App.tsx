@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import Home from "@/pages/home";
 import Landing from "@/pages/landing";
+import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -13,11 +14,20 @@ function Router() {
 
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
+      <Route path="/login" component={Login} />
+      {isLoading ? (
+        <Route path="/">
+          <div className="min-h-screen flex items-center justify-center">
+            <div>Loading...</div>
+          </div>
+        </Route>
+      ) : isAuthenticated ? (
         <>
           <Route path="/" component={Home} />
+        </>
+      ) : (
+        <>
+          <Route path="/" component={Landing} />
         </>
       )}
       <Route component={NotFound} />

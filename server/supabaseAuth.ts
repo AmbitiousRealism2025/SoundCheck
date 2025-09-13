@@ -17,6 +17,96 @@ validateEnvironment()
 
 export async function setupAuth(app: any) {
   app.set("trust proxy", 1)
+
+  // Supabase auth endpoints
+  app.post('/api/auth/signup', async (req, res) => {
+    const { email, password, firstName, lastName } = req.body
+
+    console.log('Signup request:', { email, firstName, lastName })
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+          },
+          emailRedirectTo: undefined
+        }
+      })
+
+      if (error) {
+        console.log('Supabase signup error:', error)
+        let errorMessage = error.message
+
+        // Provide more user-friendly error messages
+        if (error.code === 'email_address_invalid') {
+          errorMessage = 'Please enter a valid email address (e.g., user@gmail.com)'
+        } else if (error.message.includes('password')) {
+          errorMessage = 'Password must be at least 6 characters long'
+        }
+
+        return res.status(400).json({ error: errorMessage })
+      }
+
+      console.log('Signup successful:', { user: data.user, session: !!data.session })
+
+      res.json({
+        message: 'Signup successful',
+        user: data.user,
+        session: data.session
+      })
+    } catch (error) {
+      console.log('Server error:', error)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
+  app.post('/api/auth/login', async (req, res) => {
+    const { email, password } = req.body
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+
+      if (error) {
+        return res.status(401).json({ error: error.message })
+      }
+
+      res.json({
+        message: 'Login successful',
+        user: data.user,
+        session: data.session
+      })
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
+  app.post('/api/auth/logout', async (req, res) => {
+    try {
+      const { error } = await supabase.auth.signOut()
+
+      if (error) {
+        return res.status(400).json({ error: error.message })
+      }
+
+      res.json({ message: 'Logout successful' })
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
+  // OAuth login endpoint for redirecting to Supabase auth
+  app.get('/api/login', (req, res) => {
+    const redirectUrl = `${req.protocol}://${req.get('host')}/auth/callback`
+    const authUrl = `https://dzafkwqhzeinbzgwbfwv.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`
+    res.redirect(authUrl)
+  })
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
@@ -41,7 +131,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   } catch (error) {
     console.error('Authentication error:', error)
     return res.status(401).json({ message: "Authentication failed" })
-  })
+  }
 }
 
 // Helper function to extract user ID from authenticated request
