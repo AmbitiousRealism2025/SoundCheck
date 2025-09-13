@@ -1,5 +1,6 @@
-import { type Rehearsal, type Task, type Gig, type InsertRehearsal, type InsertTask, type InsertGig, type RehearsalWithTasks } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { type Rehearsal, type Task, type Gig, type InsertRehearsal, type InsertTask, type InsertGig, type RehearsalWithTasks, rehearsals, tasks, gigs } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, asc } from "drizzle-orm";
 
 export interface IStorage {
   // Rehearsals
@@ -25,157 +26,136 @@ export interface IStorage {
   deleteGig(id: string): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
-  private rehearsals: Map<string, Rehearsal>;
-  private tasks: Map<string, Task>;
-  private gigs: Map<string, Gig>;
-
-  constructor() {
-    this.rehearsals = new Map();
-    this.tasks = new Map();
-    this.gigs = new Map();
-  }
-
+export class DatabaseStorage implements IStorage {
   // Rehearsals
   async getRehearsals(): Promise<RehearsalWithTasks[]> {
-    const rehearsals = Array.from(this.rehearsals.values())
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const rehearsalList = await db.select().from(rehearsals).orderBy(asc(rehearsals.date));
     
-    return Promise.all(
-      rehearsals.map(async (rehearsal) => ({
+    const rehearsalsWithTasks = await Promise.all(
+      rehearsalList.map(async (rehearsal) => ({
         ...rehearsal,
         tasks: await this.getTasks(rehearsal.id),
       }))
     );
+    
+    return rehearsalsWithTasks;
   }
 
   async getRehearsal(id: string): Promise<RehearsalWithTasks | undefined> {
-    const rehearsal = this.rehearsals.get(id);
+    const [rehearsal] = await db.select().from(rehearsals).where(eq(rehearsals.id, id));
     if (!rehearsal) return undefined;
 
-    const tasks = await this.getTasks(id);
-    return { ...rehearsal, tasks };
+    const rehearsalTasks = await this.getTasks(id);
+    return { ...rehearsal, tasks: rehearsalTasks };
   }
 
   async createRehearsal(insertRehearsal: InsertRehearsal): Promise<Rehearsal> {
-    const id = randomUUID();
-    const rehearsal: Rehearsal = {
-      ...insertRehearsal,
-      id,
-      createdAt: new Date(),
-    };
-    this.rehearsals.set(id, rehearsal);
+    const [rehearsal] = await db
+      .insert(rehearsals)
+      .values(insertRehearsal)
+      .returning();
     return rehearsal;
   }
 
   async updateRehearsal(id: string, updateData: Partial<InsertRehearsal>): Promise<Rehearsal | undefined> {
-    const rehearsal = this.rehearsals.get(id);
-    if (!rehearsal) return undefined;
-
-    const updated: Rehearsal = { ...rehearsal, ...updateData };
-    this.rehearsals.set(id, updated);
-    return updated;
+    const [updated] = await db
+      .update(rehearsals)
+      .set(updateData)
+      .where(eq(rehearsals.id, id))
+      .returning();
+    return updated || undefined;
   }
 
   async deleteRehearsal(id: string): Promise<boolean> {
-    // Also delete associated tasks
-    const tasks = Array.from(this.tasks.values()).filter(task => task.rehearsalId === id);
-    tasks.forEach(task => this.tasks.delete(task.id));
+    // Delete associated tasks first
+    await db.delete(tasks).where(eq(tasks.rehearsalId, id));
     
-    return this.rehearsals.delete(id);
+    const result = await db.delete(rehearsals).where(eq(rehearsals.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Tasks
   async getTasks(rehearsalId: string): Promise<Task[]> {
-    return Array.from(this.tasks.values())
-      .filter(task => task.rehearsalId === rehearsalId)
-      .sort((a, b) => a.order - b.order);
+    const taskList = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.rehearsalId, rehearsalId))
+      .orderBy(asc(tasks.order));
+    return taskList;
   }
 
   async getTask(id: string): Promise<Task | undefined> {
-    return this.tasks.get(id);
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+    return task || undefined;
   }
 
   async createTask(insertTask: InsertTask): Promise<Task> {
-    const id = randomUUID();
-    const task: Task = {
-      ...insertTask,
-      id,
-      createdAt: new Date(),
-      order: insertTask.order ?? 0,
-      note: insertTask.note ?? null,
-      status: insertTask.status ?? "open",
-    };
-    this.tasks.set(id, task);
+    const [task] = await db
+      .insert(tasks)
+      .values(insertTask)
+      .returning();
     return task;
   }
 
   async updateTask(id: string, updateData: Partial<InsertTask>): Promise<Task | undefined> {
-    const task = this.tasks.get(id);
-    if (!task) return undefined;
-
-    const updated: Task = { ...task, ...updateData };
-    this.tasks.set(id, updated);
-    return updated;
+    const [updated] = await db
+      .update(tasks)
+      .set(updateData)
+      .where(eq(tasks.id, id))
+      .returning();
+    return updated || undefined;
   }
 
   async deleteTask(id: string): Promise<boolean> {
-    return this.tasks.delete(id);
+    const result = await db.delete(tasks).where(eq(tasks.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 
   async reorderTasks(rehearsalId: string, taskIds: string[]): Promise<Task[]> {
-    const tasks = await this.getTasks(rehearsalId);
-    const taskMap = new Map(tasks.map(task => [task.id, task]));
-
-    taskIds.forEach((taskId, index) => {
-      const task = taskMap.get(taskId);
-      if (task) {
-        task.order = index;
-        this.tasks.set(taskId, task);
-      }
-    });
+    // Update each task's order based on position in taskIds array
+    await Promise.all(
+      taskIds.map((taskId, index) =>
+        db.update(tasks)
+          .set({ order: index })
+          .where(and(eq(tasks.id, taskId), eq(tasks.rehearsalId, rehearsalId)))
+      )
+    );
 
     return this.getTasks(rehearsalId);
   }
 
   // Gigs
   async getGigs(): Promise<Gig[]> {
-    return Array.from(this.gigs.values())
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const gigList = await db.select().from(gigs).orderBy(asc(gigs.date));
+    return gigList;
   }
 
   async getGig(id: string): Promise<Gig | undefined> {
-    return this.gigs.get(id);
+    const [gig] = await db.select().from(gigs).where(eq(gigs.id, id));
+    return gig || undefined;
   }
 
   async createGig(insertGig: InsertGig): Promise<Gig> {
-    const id = randomUUID();
-    const gig: Gig = {
-      ...insertGig,
-      id,
-      createdAt: new Date(),
-      callTime: insertGig.callTime ?? null,
-      venueAddress: insertGig.venueAddress ?? null,
-      venueContact: insertGig.venueContact ?? null,
-      compensation: insertGig.compensation ?? null,
-      notes: insertGig.notes ?? null,
-    };
-    this.gigs.set(id, gig);
+    const [gig] = await db
+      .insert(gigs)
+      .values(insertGig)
+      .returning();
     return gig;
   }
 
   async updateGig(id: string, updateData: Partial<InsertGig>): Promise<Gig | undefined> {
-    const gig = this.gigs.get(id);
-    if (!gig) return undefined;
-
-    const updated: Gig = { ...gig, ...updateData };
-    this.gigs.set(id, updated);
-    return updated;
+    const [updated] = await db
+      .update(gigs)
+      .set(updateData)
+      .where(eq(gigs.id, id))
+      .returning();
+    return updated || undefined;
   }
 
   async deleteGig(id: string): Promise<boolean> {
-    return this.gigs.delete(id);
+    const result = await db.delete(gigs).where(eq(gigs.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
