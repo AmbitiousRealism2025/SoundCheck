@@ -36,6 +36,8 @@ export const gigs = pgTable("gigs", {
 export const insertRehearsalSchema = createInsertSchema(rehearsals).omit({
   id: true,
   createdAt: true,
+}).extend({
+  date: z.string().transform(val => new Date(val)),
 });
 
 export const insertTaskSchema = createInsertSchema(tasks).omit({
@@ -46,6 +48,9 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
 export const insertGigSchema = createInsertSchema(gigs).omit({
   id: true,
   createdAt: true,
+}).extend({
+  date: z.string().transform(val => new Date(val)),
+  callTime: z.string().optional().transform(val => val ? new Date(val) : null),
 });
 
 export type InsertRehearsal = z.infer<typeof insertRehearsalSchema>;
