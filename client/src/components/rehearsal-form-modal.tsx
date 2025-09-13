@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +31,7 @@ export function RehearsalFormModal({ open, onClose, rehearsal }: RehearsalFormMo
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const isEditing = !!rehearsal;
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -86,7 +88,7 @@ export function RehearsalFormModal({ open, onClose, rehearsal }: RehearsalFormMo
         date: dateTime.toISOString(),
       };
 
-      const response = await apiRequest(`/api/rehearsals/${rehearsal.id}`, "PUT", requestData);
+      const response = await apiRequest("PUT", `/api/rehearsals/${rehearsal.id}`, requestData);
       return response.json();
     },
     onSuccess: () => {
@@ -159,9 +161,12 @@ export function RehearsalFormModal({ open, onClose, rehearsal }: RehearsalFormMo
   };
 
   const handleDelete = () => {
-    if (window.confirm("Are you sure you want to delete this rehearsal? All associated tasks will also be deleted.")) {
-      deleteMutation.mutate();
-    }
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    setShowDeleteConfirm(false);
+    deleteMutation.mutate();
   };
 
   const isPending = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
@@ -303,6 +308,24 @@ export function RehearsalFormModal({ open, onClose, rehearsal }: RehearsalFormMo
           </form>
         </Form>
       </DialogContent>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Rehearsal</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this rehearsal? All associated tasks will also be deleted. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} data-testid="button-confirm-delete">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
