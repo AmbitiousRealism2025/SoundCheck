@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { Calendar, MapPin, MoreVertical, GripVertical } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TaskItem } from "./task-item";
+import { TaskItem } from "@/components/task-item";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { RehearsalWithTasks, Task, InsertTask } from "@shared/schema";
