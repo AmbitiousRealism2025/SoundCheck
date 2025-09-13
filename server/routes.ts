@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertRehearsalSchema, insertTaskSchema, insertGigSchema } from "@shared/schema";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./supabaseAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware setup
@@ -11,7 +11,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       res.json(user);
     } catch (error) {
@@ -23,7 +23,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rehearsals routes (protected)
   app.get("/api/rehearsals", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const rehearsals = await storage.getRehearsals(userId);
       res.json(rehearsals);
     } catch (error) {
@@ -33,7 +33,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/rehearsals/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const rehearsal = await storage.getRehearsal(req.params.id, userId);
       if (!rehearsal) {
         return res.status(404).json({ message: "Rehearsal not found" });
@@ -46,7 +46,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/rehearsals", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const validatedData = insertRehearsalSchema.parse(req.body);
       const rehearsal = await storage.createRehearsal(validatedData, userId);
       res.status(201).json(rehearsal);
@@ -57,7 +57,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/rehearsals/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const validatedData = insertRehearsalSchema.partial().parse(req.body);
       // Remove userId to prevent ownership tampering
       const { userId: _, ...safeData } = validatedData as any;
@@ -73,7 +73,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/rehearsals/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const success = await storage.deleteRehearsal(req.params.id, userId);
       if (!success) {
         return res.status(404).json({ message: "Rehearsal not found" });
@@ -87,7 +87,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Tasks routes (protected)
   app.post("/api/rehearsals/:rehearsalId/tasks", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const validatedData = insertTaskSchema.parse({
         ...req.body,
         rehearsalId: req.params.rehearsalId,
@@ -101,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const validatedData = insertTaskSchema.partial().parse(req.body);
       // Remove userId and rehearsalId to prevent tampering
       const { userId: _, rehearsalId: __, ...safeData } = validatedData as any;
@@ -117,7 +117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const success = await storage.deleteTask(req.params.id, userId);
       if (!success) {
         return res.status(404).json({ message: "Task not found" });
@@ -130,7 +130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/rehearsals/:rehearsalId/tasks/reorder", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { taskIds } = req.body;
       if (!Array.isArray(taskIds)) {
         return res.status(400).json({ message: "taskIds must be an array" });
@@ -145,7 +145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Gigs routes (protected)
   app.get("/api/gigs", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const gigs = await storage.getGigs(userId);
       res.json(gigs);
     } catch (error) {
@@ -155,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/gigs/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const gig = await storage.getGig(req.params.id, userId);
       if (!gig) {
         return res.status(404).json({ message: "Gig not found" });
@@ -168,7 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/gigs", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const validatedData = insertGigSchema.parse(req.body);
       const gig = await storage.createGig(validatedData, userId);
       res.status(201).json(gig);
@@ -179,7 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/gigs/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const validatedData = insertGigSchema.partial().parse(req.body);
       // Remove userId to prevent ownership tampering
       const { userId: _, ...safeData } = validatedData as any;
@@ -195,7 +195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/gigs/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const success = await storage.deleteGig(req.params.id, userId);
       if (!success) {
         return res.status(404).json({ message: "Gig not found" });
