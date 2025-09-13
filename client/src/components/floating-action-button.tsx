@@ -28,7 +28,7 @@ export function FloatingActionButton({
   };
 
   return (
-    <div className="fixed bottom-6 right-6" data-testid="floating-action-button">
+    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 max-w-md w-full flex justify-end pr-6" data-testid="floating-action-button">
       {/* Menu Items */}
       {isOpen && (
         <div className="absolute bottom-16 right-0 space-y-2 animate-in fade-in slide-in-from-bottom-2">

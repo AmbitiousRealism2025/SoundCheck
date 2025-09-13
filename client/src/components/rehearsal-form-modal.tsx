@@ -173,7 +173,7 @@ export function RehearsalFormModal({ open, onClose, rehearsal }: RehearsalFormMo
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm" data-testid="rehearsal-form-modal">
+      <DialogContent className="max-w-sm max-h-screen overflow-y-auto" data-testid="rehearsal-form-modal">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle data-testid="text-modal-title">
