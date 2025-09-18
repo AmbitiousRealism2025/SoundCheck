@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
-import { createServer as createViteServer, createLogger } from "vite";
+import { createServer as createViteServer, createLogger, type UserConfig, type UserConfigFn } from "vite";
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
@@ -27,9 +27,10 @@ export async function setupVite(app: Express, server: Server) {
   };
 
   // Get the base config and ensure root is set correctly
-  const baseConfig = typeof viteConfig === 'function'
-    ? viteConfig({ mode: 'development', command: 'serve' })
-    : viteConfig;
+  const typedViteConfig = viteConfig as UserConfig | UserConfigFn;
+  const baseConfig: UserConfig = typeof typedViteConfig === 'function'
+    ? await typedViteConfig({ mode: 'development', command: 'serve' })
+    : typedViteConfig;
 
   const vite = await createViteServer({
     ...baseConfig,

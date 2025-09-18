@@ -4,15 +4,17 @@ import path from "path";
 import istanbul from "vite-plugin-istanbul";
 
 // Conditionally import Replit-specific plugin
-let runtimeErrorOverlay: any;
-try {
-  runtimeErrorOverlay = require("@replit/vite-plugin-runtime-error-modal");
-} catch {
-  // Plugin not available in non-Replit environments
-  runtimeErrorOverlay = null;
-}
+let runtimeErrorOverlay: any = null;
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(async ({ mode }) => {
+  // Load runtime error overlay plugin dynamically
+  try {
+    const module = await import("@replit/vite-plugin-runtime-error-modal");
+    runtimeErrorOverlay = module.default || module;
+  } catch {
+    // Plugin not available in non-Replit environments
+    runtimeErrorOverlay = null;
+  }
   // Build plugins array with proper typing
   const plugins: PluginOption[] = [
     react(),
