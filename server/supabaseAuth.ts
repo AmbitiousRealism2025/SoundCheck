@@ -1,6 +1,12 @@
-import { type RequestHandler } from 'express'
+import { type RequestHandler, type Request, type Response } from 'express'
 import { createClient } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
+
+export interface AuthenticatedRequest extends Request {
+  user: {
+    id: string;
+  };
+}
 
 // Validate required environment variables at startup
 function validateEnvironment() {
@@ -20,10 +26,10 @@ export async function setupAuth(app: any) {
   app.set("trust proxy", 1)
 
   // Supabase auth endpoints
-  app.post('/api/auth/signup', async (req, res) => {
+  app.post('/api/auth/signup', async (req: Request, res: Response) => {
     const { email, password, firstName, lastName } = req.body
 
-    console.log('Signup request:', { email, firstName, lastName })
+    console.log('Signup request received')
 
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -34,12 +40,12 @@ export async function setupAuth(app: any) {
             first_name: firstName,
             last_name: lastName,
           },
-          emailRedirectTo: `${req.protocol}://${req.get('host')}/`
+          emailRedirectTo: `${req.protocol}://${req.get('host')}/auth/callback`
         }
       })
 
       if (error) {
-        console.log('Supabase signup error:', error)
+        console.log('Supabase signup error:', error.message)
         let errorMessage = error.message
 
         // Provide more user-friendly error messages
@@ -52,7 +58,7 @@ export async function setupAuth(app: any) {
         return res.status(400).json({ error: errorMessage })
       }
 
-      console.log('Signup successful:', { user: data.user, session: !!data.session })
+      console.log('Signup successful')
 
       // For development, if no session was created (email confirmation required),
       // manually confirm the user and create a session
@@ -61,10 +67,14 @@ export async function setupAuth(app: any) {
 
         try {
           // Use admin client to confirm email
-          const supabaseAdmin = createClient(
-            process.env.SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
-          )
+          const supabaseUrl = process.env.SUPABASE_URL;
+          const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+          if (!supabaseUrl || !serviceKey) {
+            throw new Error('Missing required environment variables for admin client');
+          }
+
+          const supabaseAdmin = createClient(supabaseUrl, serviceKey)
 
           // Update user to confirm email
           const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
@@ -73,7 +83,7 @@ export async function setupAuth(app: any) {
           )
 
           if (updateError) {
-            console.log('Failed to auto-confirm email:', updateError)
+            console.log('Failed to auto-confirm email:', updateError.message)
           } else {
             console.log('Email auto-confirmed successfully')
 
@@ -93,7 +103,7 @@ export async function setupAuth(app: any) {
             }
           }
         } catch (error) {
-          console.log('Auto-confirmation failed:', error)
+          console.log('Auto-confirmation failed')
         }
 
         // Return the original signup response
@@ -110,12 +120,12 @@ export async function setupAuth(app: any) {
         session: data.session
       })
     } catch (error) {
-      console.log('Server error:', error)
+      console.log('Server error during signup')
       res.status(500).json({ error: 'Internal server error' })
     }
   })
 
-  app.post('/api/auth/login', async (req, res) => {
+  app.post('/api/auth/login', async (req: Request, res: Response) => {
     const { email, password } = req.body
 
     try {
@@ -138,7 +148,7 @@ export async function setupAuth(app: any) {
     }
   })
 
-  app.post('/api/auth/logout', async (req, res) => {
+  app.post('/api/auth/logout', async (_req: Request, res: Response) => {
     try {
       const { error } = await supabase.auth.signOut()
 
@@ -153,98 +163,23 @@ export async function setupAuth(app: any) {
   })
 
   // OAuth login endpoint for redirecting to Supabase auth
-  app.get('/api/login', (req, res) => {
+  app.get('/api/login', (req: Request, res: Response) => {
     const redirectUrl = `${req.protocol}://${req.get('host')}/auth/callback`
-    const authUrl = `https://dzafkwqhzeinbzgwbfwv.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`
+    const authUrl = `${process.env.SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`
     res.redirect(authUrl)
   })
 
-  // Email confirmation callback handler
-  app.get('/auth/callback', async (req, res) => {
-    try {
-      console.log('Auth callback received:', req.query)
-
-      // Supabase sends access_token and refresh_token in the callback
-      const { access_token, refresh_token, type } = req.query
-
-      if (type === 'signup' || type === 'recovery') {
-        // For email confirmation, we need to exchange the tokens
-        if (access_token) {
-          const { data, error } = await supabase.auth.getUser(String(access_token))
-
-          if (error) {
-            console.error('Error getting user with access token:', error)
-            return res.redirect('/login?error=Invalid confirmation link')
-          }
-
-          if (data.user) {
-            console.log('Email confirmed for user:', data.user.email)
-
-            // Try to set the session
-            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-              access_token: String(access_token),
-              refresh_token: refresh_token ? String(refresh_token) : ''
-            })
-
-            if (sessionError) {
-              console.error('Error setting session:', sessionError)
-            }
-
-            // Redirect with success message and auto-login script
-            return res.send(`
-              <html>
-                <body>
-                  <h2>Email confirmed successfully!</h2>
-                  <p>You will be redirected to the application shortly...</p>
-                  <script>
-                    localStorage.setItem('supabase_token', '${access_token}');
-                    setTimeout(() => {
-                      window.location.href = '/';
-                    }, 2000);
-                  </script>
-                </body>
-              </html>
-            `)
-          }
-        }
-      }
-
-      // Fallback: try to get current session
-      const { data: sessionData, error } = await supabase.auth.getSession()
-
-      if (error) {
-        console.error('Error getting session after confirmation:', error)
-        return res.redirect('/login?error=Could not confirm email')
-      }
-
-      if (sessionData.session) {
-        // Session exists, redirect to app
-        return res.send(`
-          <html>
-            <body>
-              <h2>Email confirmed successfully!</h2>
-              <p>You will be redirected to the application shortly...</p>
-              <script>
-                localStorage.setItem('supabase_token', '${sessionData.session.access_token}');
-                setTimeout(() => {
-                  window.location.href = '/';
-                }, 2000);
-              </script>
-            </body>
-          </html>
-        `)
-      }
-
-      // No session found
-      res.redirect('/login?message=Email confirmed! Please log in.')
-    } catch (error) {
-      console.error('Email confirmation error:', error)
-      res.redirect('/login?error=Confirmation failed')
-    }
+  // Compatibility shim for old logout endpoint - client-side logout via supabase.auth.signOut() is preferred
+  app.get('/api/logout', (_req: Request, res: Response) => {
+    res.status(204).send()
   })
+
+  // Remove server /auth/callback handler - let client handle it
+  // The /auth/callback route will be handled by the SPA client
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  const authReq = req as AuthenticatedRequest;
   const authHeader = req.headers.authorization
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -261,7 +196,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     }
 
     // Add user to request object for use in route handlers
-    req.user = user
+    authReq.user = user
     return next()
   } catch (error) {
     console.error('Authentication error:', error)
@@ -270,6 +205,6 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 }
 
 // Helper function to extract user ID from authenticated request
-export const getUserId = (req: any): string => {
+export const getUserId = (req: AuthenticatedRequest): string => {
   return req.user?.id
 }

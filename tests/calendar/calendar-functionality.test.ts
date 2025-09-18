@@ -1,5 +1,46 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../setup/coverage.fixture';
 import { mockUser } from '../setup/auth.fixture';
+
+// Helper functions for dynamic date generation
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function addMonths(date: Date, months: number): Date {
+  const result = new Date(date);
+  result.setMonth(result.getMonth() + months);
+  return result;
+}
+
+function formatDateForApi(date: Date): string {
+  // Format as ISO string for API
+  return date.toISOString();
+}
+
+function formatDateForDisplay(date: Date): string {
+  // Format as YYYY-MM-DD for display/testing
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+async function navigateToMonth(page: any, targetDate: Date) {
+  // Navigate to the month containing the target date
+  const targetMonthYear = targetDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  // Check if we're already on the target month
+  const currentMonthElement = page.locator('text=' + targetMonthYear);
+  if (await currentMonthElement.isVisible({ timeout: 1000 }).catch(() => false)) {
+    return; // Already on the correct month
+  }
+
+  // Navigate to the target month (implementation depends on calendar navigation)
+  // This is a placeholder - actual implementation would depend on calendar UI
+  // For now, we'll just verify the calendar is visible
+}
 
 test.describe('Calendar Functionality', () => {
   test.beforeEach(async ({ page }) => {
@@ -45,7 +86,12 @@ test.describe('Calendar Functionality', () => {
   });
 
   test('should display events on calendar dates', async ({ page }) => {
-    // Mock rehearsal and gig data
+    // Generate dynamic dates relative to current date
+    const today = new Date();
+    const rehearsalDate = addDays(today, 5); // 5 days from now
+    const gigDate = addDays(today, 10); // 10 days from now
+
+    // Mock rehearsal and gig data with dynamic dates
     await page.route('**/api/rehearsals', route => {
       route.fulfill({
         status: 200,
@@ -55,7 +101,7 @@ test.describe('Calendar Functionality', () => {
             id: 1,
             eventName: 'Jazz Practice',
             location: 'Studio A',
-            date: '2024-12-15T18:00:00.000Z',
+            date: formatDateForApi(rehearsalDate),
             tasks: []
           }
         ])
@@ -71,7 +117,7 @@ test.describe('Calendar Functionality', () => {
             id: 1,
             venueName: 'The Blue Note',
             venueAddress: '123 Music St',
-            date: '2024-12-20T19:00:00.000Z',
+            date: formatDateForApi(gigDate),
             compensation: '500'
           }
         ])
@@ -80,12 +126,17 @@ test.describe('Calendar Functionality', () => {
 
     await page.getByTestId('tab-calendar').click();
 
-    // Navigate to December 2024
-    // Note: Calendar navigation might need specific test IDs
-    // For now, we'll verify events are displayed in the calendar
+    // Navigate to the month containing our test events
+    await navigateToMonth(page, rehearsalDate);
 
     // Verify events are shown (implementation depends on calendar library used)
     await expect(page.getByText('Jazz Practice')).toBeVisible();
+
+    // If gig is in a different month, navigate to it
+    if (rehearsalDate.getMonth() !== gigDate.getMonth() || rehearsalDate.getFullYear() !== gigDate.getFullYear()) {
+      await navigateToMonth(page, gigDate);
+    }
+
     await expect(page.getByText('The Blue Note')).toBeVisible();
   });
 
@@ -156,8 +207,20 @@ test.describe('Calendar Functionality', () => {
   });
 
   test('should show day view with events', async ({ page }) => {
-    // Mock events for a specific day
-    const testDate = '2024-12-15';
+    // Generate a dynamic test date 7 days from now
+    const today = new Date();
+    const testDate = addDays(today, 7);
+    const testDateStr = formatDateForDisplay(testDate);
+
+    // Create morning, evening, and night events on the same day
+    const morningEvent = new Date(testDate);
+    morningEvent.setHours(9, 0, 0, 0);
+
+    const eveningEvent = new Date(testDate);
+    eveningEvent.setHours(18, 0, 0, 0);
+
+    const nightEvent = new Date(testDate);
+    nightEvent.setHours(20, 0, 0, 0);
 
     await page.route('**/api/rehearsals', route => {
       route.fulfill({
@@ -168,14 +231,14 @@ test.describe('Calendar Functionality', () => {
             id: 1,
             eventName: 'Morning Practice',
             location: 'Studio A',
-            date: `${testDate}T09:00:00.000Z`,
+            date: formatDateForApi(morningEvent),
             tasks: []
           },
           {
             id: 2,
             eventName: 'Evening Practice',
             location: 'Studio B',
-            date: `${testDate}T18:00:00.000Z`,
+            date: formatDateForApi(eveningEvent),
             tasks: []
           }
         ])
@@ -191,7 +254,7 @@ test.describe('Calendar Functionality', () => {
             id: 1,
             venueName: 'The Blue Note',
             venueAddress: '123 Music St',
-            date: `${testDate}T20:00:00.000Z`,
+            date: formatDateForApi(nightEvent),
             compensation: '500'
           }
         ])
@@ -200,9 +263,12 @@ test.describe('Calendar Functionality', () => {
 
     await page.getByTestId('tab-calendar').click();
 
+    // Navigate to the month containing the test date
+    await navigateToMonth(page, testDate);
+
     // Click on a specific day to view details
     // Note: Implementation depends on calendar library
-    // await page.getByTestId(`calendar-day-${testDate}`).click();
+    // await page.getByTestId(`calendar-day-${testDateStr}`).click();
 
     // Verify day view shows all events
     // await expect(page.getByText('Morning Practice')).toBeVisible();
@@ -211,6 +277,11 @@ test.describe('Calendar Functionality', () => {
   });
 
   test('should handle timezone correctly', async ({ page }) => {
+    // Generate a dynamic date 3 days from now
+    const today = new Date();
+    const eventDate = addDays(today, 3);
+    eventDate.setHours(18, 0, 0, 0); // Set to 6 PM UTC
+
     // Mock events with different timezones
     await page.route('**/api/rehearsals', route => {
       route.fulfill({
@@ -221,7 +292,7 @@ test.describe('Calendar Functionality', () => {
             id: 1,
             eventName: 'Timezone Test',
             location: 'Test Studio',
-            date: '2024-12-15T18:00:00.000Z', // UTC time
+            date: formatDateForApi(eventDate), // UTC time
             tasks: []
           }
         ])
@@ -230,12 +301,23 @@ test.describe('Calendar Functionality', () => {
 
     await page.getByTestId('tab-calendar').click();
 
+    // Navigate to the month containing the test event
+    await navigateToMonth(page, eventDate);
+
     // Verify event is displayed with correct local time
     // Note: This depends on timezone handling implementation
     await expect(page.getByText('Timezone Test')).toBeVisible();
   });
 
   test('should show different visual indicators for different event types', async ({ page }) => {
+    // Generate dynamic dates for different event types
+    const today = new Date();
+    const rehearsalDate = addDays(today, 2); // 2 days from now
+    const gigDate = addDays(today, 3); // 3 days from now
+
+    rehearsalDate.setHours(18, 0, 0, 0); // 6 PM
+    gigDate.setHours(19, 0, 0, 0); // 7 PM
+
     // Mock both rehearsals and gigs
     await page.route('**/api/rehearsals', route => {
       route.fulfill({
@@ -246,7 +328,7 @@ test.describe('Calendar Functionality', () => {
             id: 1,
             eventName: 'Practice Session',
             location: 'Studio A',
-            date: '2024-12-15T18:00:00.000Z',
+            date: formatDateForApi(rehearsalDate),
             tasks: []
           }
         ])
@@ -262,7 +344,7 @@ test.describe('Calendar Functionality', () => {
             id: 1,
             venueName: 'Performance Venue',
             venueAddress: '123 Music St',
-            date: '2024-12-16T19:00:00.000Z',
+            date: formatDateForApi(gigDate),
             compensation: '500'
           }
         ])
@@ -270,6 +352,9 @@ test.describe('Calendar Functionality', () => {
     });
 
     await page.getByTestId('tab-calendar').click();
+
+    // Navigate to the month containing both events
+    await navigateToMonth(page, rehearsalDate);
 
     // Verify different event types are visually distinguished
     // This depends on the calendar implementation

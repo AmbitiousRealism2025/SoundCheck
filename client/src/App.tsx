@@ -8,12 +8,14 @@ import Home from "@/pages/home";
 import Landing from "@/pages/landing";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
+import AuthCallback from "@/pages/auth-callback";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
   return (
     <Switch>
+      <Route path="/auth/callback" component={AuthCallback} />
       <Route path="/login" component={Login} />
       {isLoading ? (
         <Route path="/">

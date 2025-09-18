@@ -1,49 +1,35 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
 export function useAuth() {
-  const { data: session, isLoading } = useQuery({
-    queryKey: ["auth-session"],
-    queryFn: async () => {
-      // First try to get session from Supabase
-      const { data, error } = await supabase.auth.getSession();
+  const [session, setSession] = useState<import("@supabase/supabase-js").Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-      if (error) {
-        // If no session, try to restore from localStorage
-        const token = localStorage.getItem('supabase_token');
-        if (token) {
-          // Validate the token by setting it
-          const { data: userData, error: userError } = await supabase.auth.getUser(token);
-          if (!userError && userData.user) {
-            // Create a mock session object
-            return {
-              access_token: token,
-              user: userData.user,
-              expires_at: Date.now() + 3600 * 1000 // 1 hour from now
-            };
-          }
-          // Remove invalid token
-          localStorage.removeItem('supabase_token');
-        }
-        return null;
+  useEffect(() => {
+    let isMounted = true;
+
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (isMounted) {
+        setSession(data.session ?? null);
+        setIsLoading(false);
       }
+    })();
 
-      // Store valid token in localStorage
-      if (data.session?.access_token) {
-        localStorage.setItem('supabase_token', data.session.access_token);
-      }
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession ?? null);
+    });
 
-      return data.session;
-    },
-    retry: false,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-  });
+    return () => {
+      isMounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
 
   return {
-    user: session?.user,
+    user: session?.user ?? null,
     isLoading,
-    isAuthenticated: !!session && !!session.user,
+    isAuthenticated: !!session?.user,
     session,
   };
 }

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../setup/coverage.fixture';
 
 test('should create a new rehearsal', async ({ page }) => {
   // For this test, we would need to be authenticated

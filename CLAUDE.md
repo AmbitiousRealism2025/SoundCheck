@@ -147,6 +147,16 @@ All endpoints automatically scope data to the authenticated user:
 - Authentication fix applied but needs final verification testing
 - Calendar timezone handling recently improved
 
+## 2025‑09‑13 — Supabase Migration Fix (Agent Update)
+- Context: An external agent was brought in specifically to resolve a login loop introduced during the migration from Replit OIDC to Supabase.
+- Implemented:
+  - Client-managed Supabase session (`useAuth` uses `getSession` + `onAuthStateChange`).
+  - Bearer token on all API requests (see `client/src/lib/queryClient.ts`).
+  - Client-side session establishment after login/signup via `supabase.auth.setSession`.
+  - Client route `/auth/callback` to set session from URL fragment.
+  - Standardized dev port to `5000` and updated Supabase Site/Redirect URLs.
+- Ops Notes: Ensure `.env` contains Supabase URL/keys and `PORT=5000`. In the dashboard, set Site URL `http://localhost:5000` and Redirect `http://localhost:5000/auth/callback`.
+
 ## Important Notes
 
 - This is a production-ready application, not a prototype

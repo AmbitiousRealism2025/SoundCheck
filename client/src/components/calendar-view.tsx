@@ -97,13 +97,11 @@ export function CalendarView({
     hasEvents: daysWithEvents,
   };
 
-  const modifiersStyles = {
-    hasEvents: {
-      backgroundColor: "hsl(var(--primary))",
-      color: "hsl(var(--primary-foreground))",
-      borderRadius: "6px",
-    },
-  };
+  // Use a subtle dot to indicate days with events to avoid clashing with selection styles
+  const modifiersClassNames = {
+    hasEvents:
+      "relative after:block after:w-1.5 after:h-1.5 after:rounded-full after:bg-primary after:mx-auto after:mt-1.5",
+  } as const;
 
   const generateCalendarFile = () => {
     const allEvents = [...rehearsals, ...gigs];
@@ -220,20 +218,20 @@ export function CalendarView({
         </Button>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 gap-6 overflow-x-hidden">
         {/* Calendar */}
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Calendar</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-x-hidden">
             <Calendar
               mode="single"
               selected={selectedDate}
               onSelect={handleDateSelect}
               modifiers={modifiers}
-              modifiersStyles={modifiersStyles}
-              className="rounded-md border"
+              modifiersClassNames={modifiersClassNames}
+              className="rounded-md border w-full max-w-full overflow-hidden"
               data-testid="calendar-picker"
             />
             <div className="mt-4 text-sm text-muted-foreground">

@@ -1,10 +1,9 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Calendar, MapPin, Phone, Navigation, MoreVertical } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { formatDateTime } from "@/lib/utils";
 import type { Gig } from "@shared/schema";
 
 interface GigCardProps {
@@ -47,10 +46,6 @@ export function GigCard({ gig, onEdit }: GigCardProps) {
     }
   };
 
-  const formatDateTime = (date: Date | string) => {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    return format(dateObj, "MMM d, h:mm a");
-  };
 
   const formatTime = (date: Date | string | null) => {
     if (!date) return "Not set";

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../setup/coverage.fixture';
 
 test('should display landing page with login button', async ({ page }) => {
   await page.goto('/');
@@ -19,6 +19,6 @@ test('should navigate to login when clicking login button', async ({ page }) => 
   // Click the login button
   await page.getByTestId('button-login').click();
   
-  // Check that we're redirected to the login endpoint
-  await expect(page).toHaveURL(/.*api\/login.*/);
+  // Check that we're redirected to the login page
+  await expect(page).toHaveURL(/.*\/login.*/);
 });

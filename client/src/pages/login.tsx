@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { supabase } from "@/lib/supabase"
 
 export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false)
@@ -53,7 +54,6 @@ export default function Login() {
         ? formData
         : { email: formData.email, password: formData.password }
 
-      console.log('Sending payload:', payload)
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -64,20 +64,21 @@ export default function Login() {
       })
 
       const data = await response.json()
-      console.log('Response:', data)
 
       if (!response.ok) {
         throw new Error(data.error || 'Authentication failed')
       }
 
       if (data.session) {
-        // Store the session token
-        localStorage.setItem('supabase_token', data.session.access_token)
-        // Reload to update auth state
-        window.location.reload()
+        // Establish Supabase session on the client
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token
+        })
+        window.location.href = '/'
       } else if (isSignUp && data.user) {
         // Email confirmation required
-        setError('Please check your email to confirm your account. Note: For development, you may need to update the redirect URL in Supabase settings to http://localhost:3001')
+        setError('Please check your email to confirm your account. Note: For development, set the Supabase Site/Redirect URL to http://localhost:5000')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')

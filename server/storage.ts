@@ -1,5 +1,5 @@
 import { type Rehearsal, type Task, type Gig, type InsertRehearsal, type InsertTask, type InsertGig, type RehearsalWithTasks, type User, type UpsertUser, rehearsals, tasks, gigs, users } from "@shared/schema";
-import { supabase } from "./lib/supabase";
+import { type SupabaseClient } from '@supabase/supabase-js';
 import { eq, and, asc } from "drizzle-orm";
 
 export interface IStorage {
@@ -31,9 +31,14 @@ export interface IStorage {
 }
 
 export class SupabaseStorage implements IStorage {
+  private supabase: SupabaseClient;
+
+  constructor(supabaseClient: SupabaseClient) {
+    this.supabase = supabaseClient;
+  }
   // User operations (required for Supabase Auth)
   async getUser(id: string): Promise<User | undefined> {
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('users')
       .select('*')
       .eq('id', id)
@@ -44,7 +49,7 @@ export class SupabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('users')
       .upsert({
         ...userData,
@@ -59,7 +64,7 @@ export class SupabaseStorage implements IStorage {
 
   // Rehearsals (user-scoped)
   async getRehearsals(userId: string): Promise<RehearsalWithTasks[]> {
-    const { data: rehearsals, error } = await supabase
+    const { data: rehearsals, error } = await this.supabase
       .from('rehearsals')
       .select('*')
       .eq('user_id', userId)
@@ -67,18 +72,36 @@ export class SupabaseStorage implements IStorage {
 
     if (error) throw error;
 
-    const rehearsalsWithTasks = await Promise.all(
-      rehearsals.map(async (rehearsal) => ({
-        ...rehearsal,
-        tasks: await this.getTasks(rehearsal.id, userId),
-      }))
-    );
+    // Optimize N+1 query by fetching all tasks for all rehearsals in one query
+    const rehearsalIds = rehearsals.map(r => r.id);
+    const { data: allTasks, error: tasksError } = await this.supabase
+      .from('tasks')
+      .select('*')
+      .in('rehearsal_id', rehearsalIds)
+      .eq('user_id', userId)
+      .order('order', { ascending: true });
+
+    if (tasksError) throw tasksError;
+
+    // Group tasks by rehearsal_id
+    const tasksByRehearsalId = (allTasks || []).reduce((acc, task) => {
+      if (!acc[task.rehearsal_id]) {
+        acc[task.rehearsal_id] = [];
+      }
+      acc[task.rehearsal_id].push(task);
+      return acc;
+    }, {} as Record<string, Task[]>);
+
+    const rehearsalsWithTasks = rehearsals.map((rehearsal) => ({
+      ...rehearsal,
+      tasks: tasksByRehearsalId[rehearsal.id] || [],
+    }));
 
     return rehearsalsWithTasks;
   }
 
   async getRehearsal(id: string, userId: string): Promise<RehearsalWithTasks | undefined> {
-    const { data: rehearsal, error } = await supabase
+    const { data: rehearsal, error } = await this.supabase
       .from('rehearsals')
       .select('*')
       .eq('id', id)
@@ -92,7 +115,7 @@ export class SupabaseStorage implements IStorage {
   }
 
   async createRehearsal(insertRehearsal: InsertRehearsal, userId: string): Promise<Rehearsal> {
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('rehearsals')
       .insert({
         ...insertRehearsal,
@@ -112,7 +135,7 @@ export class SupabaseStorage implements IStorage {
       updatePayload.date = new Date(updateData.date).toISOString();
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('rehearsals')
       .update(updatePayload)
       .eq('id', id)
@@ -126,7 +149,7 @@ export class SupabaseStorage implements IStorage {
 
   async deleteRehearsal(id: string, userId: string): Promise<boolean> {
     // Delete associated tasks first (RLS ensures user can only delete their own)
-    const { error: deleteTasksError } = await supabase
+    const { error: deleteTasksError } = await this.supabase
       .from('tasks')
       .delete()
       .eq('rehearsal_id', id)
@@ -134,7 +157,7 @@ export class SupabaseStorage implements IStorage {
 
     if (deleteTasksError) throw deleteTasksError;
 
-    const { error } = await supabase
+    const { error } = await this.supabase
       .from('rehearsals')
       .delete()
       .eq('id', id)
@@ -145,7 +168,7 @@ export class SupabaseStorage implements IStorage {
 
   // Tasks (user-scoped)
   async getTasks(rehearsalId: string, userId: string): Promise<Task[]> {
-    const { data: tasks, error } = await supabase
+    const { data: tasks, error } = await this.supabase
       .from('tasks')
       .select('*')
       .eq('rehearsal_id', rehearsalId)
@@ -157,7 +180,7 @@ export class SupabaseStorage implements IStorage {
   }
 
   async getTask(id: string, userId: string): Promise<Task | undefined> {
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('tasks')
       .select('*')
       .eq('id', id)
@@ -169,7 +192,7 @@ export class SupabaseStorage implements IStorage {
   }
 
   async createTask(insertTask: InsertTask, userId: string): Promise<Task> {
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('tasks')
       .insert({
         ...insertTask,
@@ -183,7 +206,7 @@ export class SupabaseStorage implements IStorage {
   }
 
   async updateTask(id: string, updateData: Partial<InsertTask>, userId: string): Promise<Task | undefined> {
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('tasks')
       .update(updateData)
       .eq('id', id)
@@ -196,7 +219,7 @@ export class SupabaseStorage implements IStorage {
   }
 
   async deleteTask(id: string, userId: string): Promise<boolean> {
-    const { error } = await supabase
+    const { error } = await this.supabase
       .from('tasks')
       .delete()
       .eq('id', id)
@@ -208,7 +231,7 @@ export class SupabaseStorage implements IStorage {
   async reorderTasks(rehearsalId: string, taskIds: string[], userId: string): Promise<Task[]> {
     // Update each task's order based on position in taskIds array
     const updatePromises = taskIds.map((taskId, index) =>
-      supabase
+      this.supabase
         .from('tasks')
         .update({ order: index })
         .eq('id', taskId)
@@ -223,7 +246,7 @@ export class SupabaseStorage implements IStorage {
 
   // Gigs (user-scoped)
   async getGigs(userId: string): Promise<Gig[]> {
-    const { data: gigs, error } = await supabase
+    const { data: gigs, error } = await this.supabase
       .from('gigs')
       .select('*')
       .eq('user_id', userId)
@@ -234,7 +257,7 @@ export class SupabaseStorage implements IStorage {
   }
 
   async getGig(id: string, userId: string): Promise<Gig | undefined> {
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('gigs')
       .select('*')
       .eq('id', id)
@@ -246,7 +269,7 @@ export class SupabaseStorage implements IStorage {
   }
 
   async createGig(insertGig: InsertGig, userId: string): Promise<Gig> {
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('gigs')
       .insert({
         ...insertGig,
@@ -266,7 +289,7 @@ export class SupabaseStorage implements IStorage {
       updatePayload.date = new Date(updateData.date).toISOString();
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('gigs')
       .update(updatePayload)
       .eq('id', id)
@@ -279,7 +302,7 @@ export class SupabaseStorage implements IStorage {
   }
 
   async deleteGig(id: string, userId: string): Promise<boolean> {
-    const { error } = await supabase
+    const { error } = await this.supabase
       .from('gigs')
       .delete()
       .eq('id', id)
@@ -288,5 +311,3 @@ export class SupabaseStorage implements IStorage {
     return !error;
   }
 }
-
-export const storage = new SupabaseStorage();

@@ -11,6 +11,7 @@ import { GigFormModal } from "@/components/gig-form-modal";
 import { EarningsTracker } from "@/components/earnings-tracker";
 import { CalendarView } from "@/components/calendar-view";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { supabase } from "@/lib/supabase";
 import type { RehearsalWithTasks, Gig } from "@shared/schema";
 
 type Tab = "rehearsals" | "gigs" | "earnings" | "calendar";
@@ -122,7 +123,10 @@ export default function Home() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => window.location.href = "/api/logout"}
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  window.location.href = "/login";
+                }}
                 className="text-muted-foreground hover:text-foreground"
                 data-testid="button-logout"
               >

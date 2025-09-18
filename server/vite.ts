@@ -26,14 +26,21 @@ export async function setupVite(app: Express, server: Server) {
     allowedHosts: true as const,
   };
 
+  // Get the base config and ensure root is set correctly
+  const baseConfig = typeof viteConfig === 'function'
+    ? viteConfig({ mode: 'development', command: 'serve' })
+    : viteConfig;
+
   const vite = await createViteServer({
-    ...viteConfig,
+    ...baseConfig,
+    root: path.resolve(import.meta.dirname, "..", "client"),
     configFile: false,
     customLogger: {
       ...viteLogger,
       error: (msg, options) => {
+        // Log the error but don't exit - let Vite handle recovery
         viteLogger.error(msg, options);
-        process.exit(1);
+        // Removed process.exit(1) to prevent server crashes on Vite errors
       },
     },
     server: serverOptions,

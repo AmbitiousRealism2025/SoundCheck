@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
 import { Calendar, MapPin, MoreVertical, GripVertical } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TaskItem } from "@/components/task-item";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { formatDateTime } from "@/lib/utils";
 import type { RehearsalWithTasks, Task, InsertTask } from "@shared/schema";
 
 interface RehearsalCardProps {
@@ -86,10 +86,6 @@ export function RehearsalCard({ rehearsal, onEdit }: RehearsalCardProps) {
     reorderTasksMutation.mutate(taskIds);
   };
 
-  const formatDateTime = (date: Date | string) => {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    return format(dateObj, "MMM d, h:mm a");
-  };
 
   return (
     <Card className="bg-card border-border" data-testid={`rehearsal-card-${rehearsal.id}`}>

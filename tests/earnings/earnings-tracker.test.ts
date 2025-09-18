@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../setup/coverage.fixture';
 import { mockUser } from '../setup/auth.fixture';
 
 test.describe('Earnings Tracker', () => {

@@ -15,6 +15,22 @@ SoundCheck helps musicians stay organized with:
 
 ## 🚀 Current Status
 
+### Authentication System
+
+**Supabase-Based Authentication**:
+- Email/password authentication with secure JWT tokens
+- Client-managed sessions using Supabase Auth SDK
+- Bearer token authorization for API requests
+- Row Level Security (RLS) for automatic user data isolation
+- Email confirmation flow with `/auth/callback` handling
+
+**Quick Setup**:
+1. Configure `.env` with Supabase credentials (see Environment Variables below)
+2. In Supabase dashboard:
+   - Set Site URL: `http://localhost:5000`
+   - Set Redirect URL: `http://localhost:5000/auth/callback`
+3. Run `npm run dev` and navigate to `/login`
+
 ### ✅ **Completed Features**
 - **🎵 Rehearsal Management**: Complete task management system with add/edit/delete functionality
 - **🎤 Gig Management**: Venue tracking, compensation management, and detailed gig information
@@ -25,7 +41,7 @@ SoundCheck helps musicians stay organized with:
   - Professional iCal export functionality
   - Quick date-aware event creation
   - Daily event overview system
-- **🔐 User Authentication**: Replit OIDC integration with session management
+- **🔐 User Authentication**: Supabase authentication with email/password and OAuth support
 - **💾 Database Integration**: PostgreSQL with user-scoped data isolation
 - **🎨 Professional UI**: Modern design with dark/light theme support
 - **📱 Mobile Responsive**: Touch-friendly interface optimized for mobile devices
@@ -36,15 +52,16 @@ SoundCheck helps musicians stay organized with:
 - **Navigation Integration**: Seamless tab switching between Rehearsals, Gigs, Earnings, and Calendar
 
 ### ⚠️ **Known Issues**
-- **Authentication**: callbackURL fix verified ✅, but requires environment setup for full testing
-  - System analysis shows solid OIDC implementation with proper security measures
-  - Ready for deployment in Replit environment with proper environment variables
+- **Authentication**: Email confirmation flow requires proper Supabase dashboard configuration
+  - Ensure Site URL and Redirect URLs are configured correctly in Supabase dashboard
+  - Development environment auto-confirms emails for smoother local testing
 
 ### 🧪 **Testing Status**
 - **Comprehensive Test Suite**: 90+ Playwright tests covering all features
 - **Test Coverage**: Authentication, CRUD operations, navigation, mobile responsiveness, calendar, earnings
 - **Mobile Testing**: iPhone 12, Pixel 5, iPad viewports with touch interaction testing
-- **Test Execution**: Run with `npm test` (requires DATABASE_URL environment variable)
+- **Test Execution**: Run with `npm test`
+- **Test Authentication**: Tests include Supabase session seeding for reliable auth testing
 - **Test Documentation**: Complete test suite documentation in `tests/README.md`
 
 ## 🏗️ **Technical Architecture**
@@ -58,15 +75,15 @@ SoundCheck helps musicians stay organized with:
 
 ### **Backend**
 - **Express.js** server with TypeScript
-- **PostgreSQL** database with Drizzle ORM
-- **Passport.js** with OpenID Connect for authentication
-- **Session management** with secure httpOnly cookies
+- **Supabase** for database and authentication
+- **JWT-based authentication** with Bearer token authorization
+- **Row Level Security (RLS)** for automatic user data isolation
 
 ### **Key Files**
 - `shared/schema.ts` - Type-safe data models and validation schemas
 - `server/routes.ts` - RESTful API endpoints with user scoping
 - `server/storage.ts` - Database abstraction layer
-- `server/replitAuth.ts` - Authentication configuration
+- `server/supabaseAuth.ts` - Authentication configuration
 - `client/src/pages/home.tsx` - Main application interface
 - `client/src/components/calendar-view.tsx` - Calendar integration
 - `client/src/components/earnings-tracker.tsx` - Earnings dashboard
@@ -74,14 +91,23 @@ SoundCheck helps musicians stay organized with:
 ## 🚀 **Getting Started**
 
 ### **Prerequisites**
-- Node.js environment (configured via Replit)
-- PostgreSQL database (available via Replit)
+- Node.js environment
+- Supabase project with configured authentication
 
 ### **Running the Application**
 ```bash
 npm run dev
 ```
 The application will be available at `http://localhost:5000`
+
+### **Environment Variables**
+Copy `.env.example` to `.env` and configure:
+- `PORT=5000` - Server port
+- `SUPABASE_URL` - Your Supabase project URL
+- `SUPABASE_SERVICE_ROLE_KEY` - Service role key for admin operations
+- `SUPABASE_ANON_KEY` - Anonymous key for client operations
+- `VITE_SUPABASE_URL` - Same as SUPABASE_URL (for frontend)
+- `VITE_SUPABASE_ANON_KEY` - Same as SUPABASE_ANON_KEY (for frontend)
 
 ### **Running Tests**
 ```bash
@@ -101,14 +127,17 @@ npm run test:mobile
 npm run test:report
 ```
 
-**Note**: Tests require a DATABASE_URL environment variable to be set
+**Note**: Tests use mocked API responses and seeded Supabase sessions for consistent testing
 
-### **Environment Variables**
-Required environment variables (managed by Replit):
-- `DATABASE_URL` - PostgreSQL connection string
-- `SESSION_SECRET` - Session encryption key
-- `REPLIT_DOMAINS` - Allowed domains for authentication
-- `ISSUER_URL` - OIDC provider endpoint (optional, defaults to Replit OIDC)
+### **Supabase Configuration**
+1. Create a new Supabase project at https://supabase.com
+2. Configure authentication settings:
+   - Enable Email/Password authentication
+   - Set Site URL: `http://localhost:5000` (or your production domain)
+   - Set Redirect URL: `http://localhost:5000/auth/callback` (for client-side session establishment)
+3. Run database migrations:
+   - Apply migrations from `supabase/migrations/` directory
+   - Or use `npm run db:push` for schema updates
 
 ## 🎯 **What's Next**
 
@@ -147,7 +176,7 @@ Required environment variables (managed by Replit):
 
 ### **Data Safety**
 - All database queries are user-scoped for data isolation
-- Session management uses secure httpOnly cookies
+- Sessions are managed by the Supabase client; API requests include `Authorization: Bearer <JWT>`; no httpOnly cookies are used
 - No mock or placeholder data in production paths
 
 ### **Code Standards**
