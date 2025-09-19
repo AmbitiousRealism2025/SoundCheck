@@ -28,22 +28,33 @@ export function FloatingActionButton({
   };
 
   return (
-    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 max-w-md w-full flex justify-end pr-6" data-testid="floating-action-button">
+    <>
       {/* Menu Items */}
       {isOpen && (
-        <div className="absolute bottom-16 right-0 space-y-2 animate-in fade-in slide-in-from-bottom-2">
+        <div
+          className="fixed bottom-20 right-6 bottom-safe-20 right-safe-6 space-y-2 max-h-64 overflow-y-auto animate-in fade-in slide-in-from-bottom-2 floating-action-button"
+          role="menu"
+          aria-labelledby="fab-button"
+          data-testid="fab-menu"
+        >
           <Button
             onClick={handleCreateRehearsal}
-            className="flex items-center bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg hover:bg-primary/90 transition-all transform hover:translate-x-1"
+            variant="default"
+            size="lg"
+            className="w-full justify-start shadow-lg transition-all transform hover:-translate-x-1"
             data-testid="button-new-rehearsal"
+            role="menuitem"
           >
             <Calendar className="w-4 h-4 mr-2" />
             <span className="text-sm font-medium">New Rehearsal</span>
           </Button>
           <Button
             onClick={handleCreateGig}
-            className="flex items-center bg-secondary text-white px-4 py-2 rounded-lg shadow-lg hover:bg-secondary/90 transition-all transform hover:translate-x-1"
+            variant="secondary"
+            size="lg"
+            className="w-full justify-start shadow-lg transition-all transform hover:-translate-x-1"
             data-testid="button-new-gig"
+            role="menuitem"
           >
             <Mic className="w-4 h-4 mr-2" />
             <span className="text-sm font-medium">New Gig</span>
@@ -53,16 +64,21 @@ export function FloatingActionButton({
 
       {/* Main FAB */}
       <Button
+        id="fab-button"
         onClick={toggleMenu}
-        className="w-14 h-14 stage-lighting rounded-full shadow-lg hover:scale-110 transition-transform p-0"
+        size="icon"
+        className="fixed bottom-6 right-6 bottom-safe-6 right-safe-6 stage-lighting rounded-full shadow-lg hover:scale-110 transition-transform floating-action-button"
         data-testid="button-fab-toggle"
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        aria-label={isOpen ? "Close menu" : "Open create menu"}
       >
         {isOpen ? (
-          <X className="text-white w-5 h-5 transform rotate-90 transition-transform" />
+          <X className="text-primary-foreground w-5 h-5 transform rotate-90 transition-transform" />
         ) : (
-          <Plus className="text-white w-5 h-5 transform rotate-0 transition-transform" />
+          <Plus className="text-primary-foreground w-5 h-5 transform rotate-0 transition-transform" />
         )}
       </Button>
-    </div>
+    </>
   );
 }

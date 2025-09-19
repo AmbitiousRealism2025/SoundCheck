@@ -4,13 +4,33 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
-import { X } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  ResponsiveModal,
+  ResponsiveModalContent,
+  ResponsiveModalHeader,
+  ResponsiveModalTitle,
+} from "@/components/ui/responsive-modal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertRehearsalSchema, type RehearsalWithTasks } from "@shared/schema";
@@ -29,7 +49,12 @@ interface RehearsalFormModalProps {
   initialDate?: Date | null;
 }
 
-export function RehearsalFormModal({ open, onClose, rehearsal, initialDate }: RehearsalFormModalProps) {
+export function RehearsalFormModal({
+  open,
+  onClose,
+  rehearsal,
+  initialDate,
+}: RehearsalFormModalProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const isEditing = !!rehearsal;
@@ -49,7 +74,7 @@ export function RehearsalFormModal({ open, onClose, rehearsal, initialDate }: Re
     mutationFn: async (data: FormData) => {
       // Combine date and time into a single DateTime
       const dateTime = new Date(`${data.date}T${data.time}`);
-      
+
       const requestData = {
         eventName: data.eventName,
         location: data.location,
@@ -68,7 +93,7 @@ export function RehearsalFormModal({ open, onClose, rehearsal, initialDate }: Re
       onClose();
       form.reset();
     },
-    onError: (error) => {
+    onError: error => {
       toast({
         title: "Error",
         description: error.message || "Failed to create rehearsal",
@@ -80,10 +105,10 @@ export function RehearsalFormModal({ open, onClose, rehearsal, initialDate }: Re
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
       if (!rehearsal) throw new Error("No rehearsal to update");
-      
+
       // Combine date and time into a single DateTime
       const dateTime = new Date(`${data.date}T${data.time}`);
-      
+
       const requestData = {
         eventName: data.eventName,
         location: data.location,
@@ -101,7 +126,7 @@ export function RehearsalFormModal({ open, onClose, rehearsal, initialDate }: Re
       });
       onClose();
     },
-    onError: (error) => {
+    onError: error => {
       toast({
         title: "Error",
         description: error.message || "Failed to update rehearsal",
@@ -123,7 +148,7 @@ export function RehearsalFormModal({ open, onClose, rehearsal, initialDate }: Re
       });
       onClose();
     },
-    onError: (error) => {
+    onError: error => {
       toast({
         title: "Error",
         description: error.message || "Failed to delete rehearsal",
@@ -135,8 +160,8 @@ export function RehearsalFormModal({ open, onClose, rehearsal, initialDate }: Re
   useEffect(() => {
     if (rehearsal && open) {
       const rehearsalDate = new Date(rehearsal.date);
-      const dateString = format(rehearsalDate, 'yyyy-MM-dd');
-      const timeString = format(rehearsalDate, 'HH:mm');
+      const dateString = format(rehearsalDate, "yyyy-MM-dd");
+      const timeString = format(rehearsalDate, "HH:mm");
 
       form.reset({
         eventName: rehearsal.eventName,
@@ -146,8 +171,8 @@ export function RehearsalFormModal({ open, onClose, rehearsal, initialDate }: Re
       });
     } else if (open && !rehearsal) {
       // Set initial date if provided, otherwise use empty values
-      const dateString = initialDate ? format(initialDate, 'yyyy-MM-dd') : "";
-      
+      const dateString = initialDate ? format(initialDate, "yyyy-MM-dd") : "";
+
       form.reset({
         eventName: "",
         location: "",
@@ -174,27 +199,24 @@ export function RehearsalFormModal({ open, onClose, rehearsal, initialDate }: Re
     deleteMutation.mutate();
   };
 
-  const isPending = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
+  const isPending =
+    createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm max-h-screen overflow-y-auto" data-testid="rehearsal-form-modal">
-        <DialogHeader>
+    <ResponsiveModal
+      open={open}
+      onOpenChange={nextOpen => {
+        if (!nextOpen) onClose();
+      }}
+    >
+      <ResponsiveModalContent data-testid="rehearsal-form-modal">
+        <ResponsiveModalHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle data-testid="text-modal-title">
+            <ResponsiveModalTitle data-testid="text-modal-title">
               {isEditing ? "Edit Rehearsal" : "New Rehearsal"}
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="text-muted-foreground hover:text-foreground p-1 h-auto"
-              data-testid="button-close-modal"
-            >
-              <X className="w-4 h-4" />
-            </Button>
+            </ResponsiveModalTitle>
           </div>
-        </DialogHeader>
+        </ResponsiveModalHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -276,7 +298,9 @@ export function RehearsalFormModal({ open, onClose, rehearsal, initialDate }: Re
               )}
             />
 
-            <div className={`flex space-x-3 pt-4 ${isEditing ? 'flex-col space-y-3 space-x-0' : ''}`}>
+            <div
+              className={`flex space-x-3 pt-4 ${isEditing ? "flex-col space-y-3 space-x-0" : ""}`}
+            >
               {isEditing && (
                 <Button
                   type="button"
@@ -288,7 +312,7 @@ export function RehearsalFormModal({ open, onClose, rehearsal, initialDate }: Re
                   Delete Rehearsal
                 </Button>
               )}
-              
+
               <div className="flex space-x-3">
                 <Button
                   type="button"
@@ -312,7 +336,7 @@ export function RehearsalFormModal({ open, onClose, rehearsal, initialDate }: Re
             </div>
           </form>
         </Form>
-      </DialogContent>
+      </ResponsiveModalContent>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
@@ -320,7 +344,8 @@ export function RehearsalFormModal({ open, onClose, rehearsal, initialDate }: Re
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Rehearsal</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this rehearsal? All associated tasks will also be deleted. This action cannot be undone.
+              Are you sure you want to delete this rehearsal? All associated tasks will also be
+              deleted. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -331,6 +356,6 @@ export function RehearsalFormModal({ open, onClose, rehearsal, initialDate }: Re
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Dialog>
+    </ResponsiveModal>
   );
 }

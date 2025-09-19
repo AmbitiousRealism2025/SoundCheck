@@ -22,11 +22,7 @@ export function RehearsalCard({ rehearsal, onEdit }: RehearsalCardProps) {
 
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: InsertTask) => {
-      const response = await apiRequest(
-        "POST",
-        `/api/rehearsals/${rehearsal.id}/tasks`,
-        taskData
-      );
+      const response = await apiRequest("POST", `/api/rehearsals/${rehearsal.id}/tasks`, taskData);
       return response.json();
     },
     onSuccess: () => {
@@ -49,11 +45,9 @@ export function RehearsalCard({ rehearsal, onEdit }: RehearsalCardProps) {
 
   const reorderTasksMutation = useMutation({
     mutationFn: async (taskIds: string[]) => {
-      const response = await apiRequest(
-        "POST",
-        `/api/rehearsals/${rehearsal.id}/tasks/reorder`,
-        { taskIds }
-      );
+      const response = await apiRequest("POST", `/api/rehearsals/${rehearsal.id}/tasks/reorder`, {
+        taskIds,
+      });
       return response.json();
     },
     onSuccess: () => {
@@ -86,13 +80,15 @@ export function RehearsalCard({ rehearsal, onEdit }: RehearsalCardProps) {
     reorderTasksMutation.mutate(taskIds);
   };
 
-
   return (
     <Card className="bg-card border-border" data-testid={`rehearsal-card-${rehearsal.id}`}>
       <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex-1">
-            <h3 className="font-semibold text-lg" data-testid={`text-rehearsal-name-${rehearsal.id}`}>
+            <h3
+              className="font-semibold text-lg"
+              data-testid={`text-rehearsal-name-${rehearsal.id}`}
+            >
               {rehearsal.eventName}
             </h3>
             <p className="text-sm text-muted-foreground flex items-center mt-1">
@@ -127,7 +123,7 @@ export function RehearsalCard({ rehearsal, onEdit }: RehearsalCardProps) {
 
           {/* Task List */}
           <div className="space-y-2" data-testid={`tasks-list-${rehearsal.id}`}>
-            {rehearsal.tasks.map((task) => (
+            {rehearsal.tasks.map(task => (
               <TaskItem
                 key={task.id}
                 task={task}
@@ -143,10 +139,10 @@ export function RehearsalCard({ rehearsal, onEdit }: RehearsalCardProps) {
               <input
                 type="text"
                 value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
+                onChange={e => setNewTaskTitle(e.target.value)}
                 placeholder="Task title..."
                 className="flex-1 bg-input border border-border rounded px-3 py-2 text-sm"
-                onKeyDown={(e) => {
+                onKeyDown={e => {
                   if (e.key === "Enter") handleAddTask();
                   if (e.key === "Escape") {
                     setShowAddTask(false);

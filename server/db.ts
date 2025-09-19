@@ -27,12 +27,13 @@ export async function checkDatabaseConnection(): Promise<boolean> {
   try {
     client = await pool.connect();
     const result = await client.query('SELECT NOW()');
-    if (process.env.DEBUG_HEALTHCHECK) {
-      console.log('Database connection successful:', result.rows[0]);
-    }
+    // Database connection successful
     return true;
   } catch (error) {
-    console.error('Database connection failed:', error);
+    // Log critical database errors for production debugging
+    if (process.env.NODE_ENV === 'production') {
+      console.error('Database connection failed:', error instanceof Error ? error.message : 'Unknown error');
+    }
     return false;
   } finally {
     if (client) {
@@ -47,9 +48,12 @@ export async function checkDatabaseConnection(): Promise<boolean> {
 export async function gracefulShutdown(): Promise<void> {
   try {
     await pool.end();
-    console.log('Database pool closed gracefully');
+    // Database pool closed gracefully
   } catch (error) {
-    console.error('Error closing database pool:', error);
+    // Log critical shutdown errors for production debugging
+    if (process.env.NODE_ENV === 'production') {
+      console.error('Error closing database pool:', error instanceof Error ? error.message : 'Unknown error');
+    }
   }
 }
 

@@ -1,107 +1,103 @@
-import { useState, useEffect } from 'react'
-import { Music, Mail, Lock, User, CheckCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { supabase } from "@/lib/supabase"
+import { useState, useEffect } from "react";
+import { Music, Mail, Lock, User, CheckCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/lib/supabase";
 
 export default function Login() {
-  const [isSignUp, setIsSignUp] = useState(false)
+  const [isSignUp, setIsSignUp] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: ''
-  })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+    email: "",
+    password: "",
+    firstName: "",
+    lastName: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   // Check for URL parameters on mount
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const message = params.get('message')
-    const errorParam = params.get('error')
+    const params = new URLSearchParams(window.location.search);
+    const message = params.get("message");
+    const errorParam = params.get("error");
 
     if (message) {
-      setSuccess(message)
+      setSuccess(message);
       // Clear the URL
-      window.history.replaceState({}, document.title, window.location.pathname)
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
 
     if (errorParam) {
-      setError(errorParam)
-      window.history.replaceState({}, document.title, window.location.pathname)
+      setError(errorParam);
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, [])
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
-    }))
-  }
+      [e.target.name]: e.target.value,
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
-      const endpoint = isSignUp ? '/api/auth/signup' : '/api/auth/login'
-      const payload = isSignUp
-        ? formData
-        : { email: formData.email, password: formData.password }
-
+      const endpoint = isSignUp ? "/api/auth/signup" : "/api/auth/login";
+      const payload = isSignUp ? formData : { email: formData.email, password: formData.password };
 
       const response = await fetch(endpoint, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload)
-      })
+        body: JSON.stringify(payload),
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Authentication failed')
+        throw new Error(data.error || "Authentication failed");
       }
 
       if (data.session) {
         // Establish Supabase session on the client
         await supabase.auth.setSession({
           access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token
-        })
-        window.location.href = '/'
+          refresh_token: data.session.refresh_token,
+        });
+        window.location.href = "/";
       } else if (isSignUp && data.user) {
         // Email confirmation required
-        setError('Please check your email to confirm your account. Note: For development, set the Supabase Site/Redirect URL to http://localhost:5000')
+        setError(
+          "Please check your email to confirm your account. Note: For development, set the Supabase Site/Redirect URL to http://localhost:5000"
+        );
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="w-12 h-12 stage-lighting rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Music className="text-white w-6 h-6" />
+            <Music className="text-primary-foreground w-6 h-6" />
           </div>
-          <CardTitle className="text-2xl">
-            {isSignUp ? 'Create Account' : 'Welcome Back'}
-          </CardTitle>
+          <CardTitle className="text-2xl">{isSignUp ? "Create Account" : "Welcome Back"}</CardTitle>
           <CardDescription>
             {isSignUp
-              ? 'Join musicians who trust SoundCheck'
-              : 'Sign in to manage your gigs and rehearsals'
-            }
+              ? "Join musicians who trust SoundCheck"
+              : "Sign in to manage your gigs and rehearsals"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -186,12 +182,8 @@ export default function Login() {
               </div>
             )}
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={loading}
-            >
-              {loading ? 'Please wait...' : (isSignUp ? 'Create Account' : 'Sign In')}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
             </Button>
           </form>
 
@@ -201,14 +193,11 @@ export default function Login() {
               onClick={() => setIsSignUp(!isSignUp)}
               className="text-sm text-primary hover:underline"
             >
-              {isSignUp
-                ? 'Already have an account? Sign in'
-                : "Don't have an account? Sign up"
-              }
+              {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
             </button>
           </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

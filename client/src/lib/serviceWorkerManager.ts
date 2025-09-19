@@ -94,14 +94,12 @@ class ServiceWorkerManager {
    */
   public async register(): Promise<ServiceWorkerRegistration | null> {
     if (!('serviceWorker' in navigator)) {
-      console.error('Service workers are not supported in this browser');
       this.logTelemetry('registration_unsupported');
       return null;
     }
 
     try {
       const registration = await navigator.serviceWorker.register(this.config.swUrl);
-      console.log('Service Worker registered successfully:', registration.scope);
       this.logTelemetry('registration_success');
 
       // Wait for controller with timeout
@@ -116,7 +114,6 @@ class ServiceWorkerManager {
 
       return registration;
     } catch (error) {
-      console.error('Service Worker registration failed:', error);
       this.logTelemetry('registration_failed');
 
       // Classify error and determine if retry is appropriate
@@ -173,8 +170,6 @@ class ServiceWorkerManager {
   private async retryRegistration(): Promise<ServiceWorkerRegistration | null> {
     this.retryState.retryCount++;
     const delay = this.calculateBackoffDelay();
-
-    console.log(`Retrying service worker registration in ${delay}ms (attempt ${this.retryState.retryCount}/${this.config.maxRetries})`);
 
     await this.delay(delay);
     return this.register();
@@ -234,7 +229,6 @@ class ServiceWorkerManager {
         this.logTelemetry('poll_success');
       } else if (response.status >= 400 && response.status < 500) {
         // Client error - don't retry aggressively
-        console.warn(`Poll failed with client error: ${response.status}`);
         this.logTelemetry('poll_client_error');
         this.retryState.nextInterval = Math.min(
           this.retryState.nextInterval * 2,
@@ -242,7 +236,6 @@ class ServiceWorkerManager {
         );
       } else if (response.status >= 500) {
         // Server error - apply backoff
-        console.warn(`Poll failed with server error: ${response.status}`);
         this.logTelemetry('poll_server_error');
         this.applyBackoff(response);
       }
@@ -250,10 +243,8 @@ class ServiceWorkerManager {
       clearTimeout(timeout);
 
       if (error.name === 'AbortError') {
-        console.warn('Poll request timed out');
         this.logTelemetry('poll_timeout');
       } else {
-        console.error('Poll request failed:', error);
         this.logTelemetry('poll_network_error');
       }
 
@@ -392,10 +383,7 @@ class ServiceWorkerManager {
     const count = this.telemetry.get(event) || 0;
     this.telemetry.set(event, count + 1);
 
-    // Log telemetry periodically or implement custom reporting
-    if (count % 100 === 0) {
-      console.log(`Telemetry - ${event}: ${count}`);
-    }
+    // Telemetry logged internally - can be retrieved via getTelemetry()
   }
 
   /**

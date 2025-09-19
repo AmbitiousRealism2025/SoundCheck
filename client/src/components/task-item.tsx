@@ -123,7 +123,7 @@ export function TaskItem({ task, rehearsalId, onReorder }: TaskItemProps) {
   return (
     <>
       <div
-        className="flex items-center space-x-3 p-2 rounded hover:bg-muted transition-colors group"
+        className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors group"
         data-testid={`task-item-${task.id}`}
         draggable
         onDragStart={handleDragStart}
@@ -133,14 +133,14 @@ export function TaskItem({ task, rehearsalId, onReorder }: TaskItemProps) {
         <button
           onClick={handleToggleComplete}
           disabled={updateTaskMutation.isPending}
-          className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-colors ${
+          className={`w-11 h-11 border-2 rounded-lg flex items-center justify-center transition-colors ${
             isCompleted
               ? "bg-primary border-primary"
-              : "border-primary hover:bg-primary"
+              : "border-muted-foreground/50 hover:border-primary hover:bg-primary/10"
           }`}
           data-testid={`button-toggle-task-${task.id}`}
         >
-          {isCompleted && <Check className="w-3 h-3 text-primary-foreground" />}
+          {isCompleted && <Check className="w-6 h-6 text-primary-foreground" />}
         </button>
 
         <div className="flex-1">
@@ -162,21 +162,21 @@ export function TaskItem({ task, rehearsalId, onReorder }: TaskItemProps) {
           )}
         </div>
 
-        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button
             variant="ghost"
-            size="sm"
+            size="default"
             onClick={handleDelete}
             disabled={deleteTaskMutation.isPending}
-            className="text-muted-foreground hover:text-destructive p-1 h-auto"
+            className="text-muted-foreground hover:text-destructive"
             data-testid={`button-delete-task-${task.id}`}
           >
             <Trash2 className="w-4 h-4" />
           </Button>
           <Button
             variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground cursor-grab p-1 h-auto"
+            size="default"
+            className="text-muted-foreground hover:text-foreground cursor-grab"
             data-testid={`button-drag-task-${task.id}`}
           >
             <GripVertical className="w-4 h-4" />

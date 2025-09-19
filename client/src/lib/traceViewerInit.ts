@@ -18,7 +18,6 @@ export async function initializeTraceViewer(config: TraceViewerConfig = {}) {
 
   // Only initialize service worker for non-file protocols
   if (window.location.protocol === 'file:') {
-    console.log('Service workers not available in file:// protocol');
     return null;
   }
 
@@ -50,7 +49,6 @@ Make sure to serve the Trace Viewer via HTTPS or localhost.`
     const registration = await swManager.register();
 
     if (!registration) {
-      console.error('Failed to register service worker');
       return null;
     }
 
@@ -61,8 +59,6 @@ Make sure to serve the Trace Viewer via HTTPS or localhost.`
 
     return { swManager, registration };
   } catch (error) {
-    console.error('Service worker initialization failed:', error);
-
     // Provide fallback behavior or user notification
     notifyUserOfServiceWorkerFailure(error);
 
@@ -81,7 +77,6 @@ function setupEventDrivenUpdates() {
 
   // Listen for service worker updates
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    console.log('Service worker updated, reloading may be required');
     handleServiceWorkerUpdate();
   });
 
@@ -107,7 +102,6 @@ function handleServiceWorkerMessage(data: any) {
   switch (data.method) {
     case 'update':
       // Handle update notification
-      console.log('Update available:', data.params);
       break;
     case 'progress':
       // Handle progress updates
@@ -117,7 +111,6 @@ function handleServiceWorkerMessage(data: any) {
       break;
     case 'error':
       // Handle error notifications
-      console.error('Service worker error:', data.params);
       break;
     default:
       // Unknown message type
@@ -140,7 +133,6 @@ function handleServiceWorkerUpdate() {
  * Handle broadcast messages for cross-tab communication
  */
 function handleBroadcastMessage(data: any) {
-  console.log('Broadcast message received:', data);
   // Handle cross-tab synchronization
 }
 
@@ -149,7 +141,6 @@ function handleBroadcastMessage(data: any) {
  */
 async function setupPushNotifications() {
   if (!('PushManager' in window)) {
-    console.log('Push notifications not supported');
     return;
   }
 
@@ -165,10 +156,9 @@ async function setupPushNotifications() {
         applicationServerKey: getVAPIDPublicKey(),
       });
 
-      console.log('Push subscription active:', subscription);
+      // Push subscription active
     }
   } catch (error) {
-    console.log('Push notification setup failed:', error);
     // Push is optional, so we don't throw
   }
 }
@@ -204,13 +194,14 @@ function notifyUserOfServiceWorkerFailure(error: any) {
   });
   window.dispatchEvent(event);
 
-  // Log for debugging
-  console.error('Service Worker Registration Failed:', {
-    message,
-    error,
-    timestamp: new Date().toISOString(),
-    userAgent: navigator.userAgent,
-  });
+  // Critical error logging for production debugging
+  if (process.env.NODE_ENV === 'production') {
+    console.error('Service Worker Registration Failed:', {
+      message,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
 }
 
 /**

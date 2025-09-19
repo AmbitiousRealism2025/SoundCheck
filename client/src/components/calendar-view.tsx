@@ -40,7 +40,7 @@ export function CalendarView({
   const eventsByDate = new Map<string, CalendarEvent[]>();
 
   // Process rehearsals
-  rehearsals.forEach((rehearsal) => {
+  rehearsals.forEach(rehearsal => {
     const date = new Date(rehearsal.date);
     const dateKey = format(date, "yyyy-MM-dd");
     const event: CalendarEvent = {
@@ -58,7 +58,7 @@ export function CalendarView({
   });
 
   // Process gigs
-  gigs.forEach((gig) => {
+  gigs.forEach(gig => {
     const date = new Date(gig.date);
     const dateKey = format(date, "yyyy-MM-dd");
     const event: CalendarEvent = {
@@ -83,7 +83,7 @@ export function CalendarView({
   // Get days with events for visual highlighting
   const daysWithEvents = Array.from(eventsByDate.keys()).map(dateKey => {
     // Parse dateKey (YYYY-MM-DD) to prevent UTC midnight interpretation
-    const [year, month, day] = dateKey.split('-').map(Number);
+    const [year, month, day] = dateKey.split("-").map(Number);
     return new Date(year, month - 1, day); // month is 0-indexed in Date constructor
   });
 
@@ -106,17 +106,20 @@ export function CalendarView({
   const generateCalendarFile = () => {
     const allEvents = [...rehearsals, ...gigs];
     const now = new Date();
-    const dtstamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
-    
+    const dtstamp = now
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace(/\.\d{3}Z$/, "Z");
+
     // Helper function to escape text for iCal format
     const escapeText = (text: string) => {
       if (!text) return "";
       return text
-        .replace(/\\/g, "\\\\")  // Escape backslashes
-        .replace(/;/g, "\\;")    // Escape semicolons
-        .replace(/,/g, "\\,")    // Escape commas
-        .replace(/\n/g, "\\n")   // Escape newlines
-        .replace(/\r/g, "");     // Remove carriage returns
+        .replace(/\\/g, "\\\\") // Escape backslashes
+        .replace(/;/g, "\\;") // Escape semicolons
+        .replace(/,/g, "\\,") // Escape commas
+        .replace(/\n/g, "\\n") // Escape newlines
+        .replace(/\r/g, ""); // Remove carriage returns
     };
 
     let icalContent = [
@@ -127,21 +130,27 @@ export function CalendarView({
       "METHOD:PUBLISH",
     ];
 
-    allEvents.forEach((event) => {
+    allEvents.forEach(event => {
       const date = new Date(event.date);
-      
+
       // Convert to proper UTC before formatting with Z suffix
-      const startTime = date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
-      
+      const startTime = date
+        .toISOString()
+        .replace(/[-:]/g, "")
+        .replace(/\.\d{3}Z$/, "Z");
+
       // Set duration based on event type - gigs are typically longer
-      const isRehearsal = 'eventName' in event;
+      const isRehearsal = "eventName" in event;
       const durationHours = isRehearsal ? 2 : 4; // Rehearsals: 2 hours, Gigs: 4 hours
       const endDate = new Date(date.getTime() + durationHours * 60 * 60 * 1000);
-      const endTime = endDate.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
-      
+      const endTime = endDate
+        .toISOString()
+        .replace(/[-:]/g, "")
+        .replace(/\.\d{3}Z$/, "Z");
+
       const title = escapeText(isRehearsal ? event.eventName : event.venueName);
       const location = escapeText(isRehearsal ? event.location : event.venueAddress || "");
-      
+
       // Build description with more details
       let description = isRehearsal ? "Rehearsal" : "Gig";
       if (!isRehearsal && (event as Gig).compensation) {
@@ -191,8 +200,8 @@ export function CalendarView({
     return (
       <div className="space-y-4">
         <div className="animate-pulse">
-          <div className="h-6 bg-muted rounded w-32 mb-4"></div>
-          <div className="h-80 bg-muted rounded mb-4"></div>
+          <div className="h-6 bg-muted rounded w-32 mb-6"></div>
+          <div className="h-80 bg-muted rounded mb-6"></div>
           <div className="h-32 bg-muted rounded"></div>
         </div>
       </div>
@@ -209,7 +218,7 @@ export function CalendarView({
         </div>
         <Button
           variant="outline"
-          size="sm"
+          size="xs"
           onClick={downloadCalendar}
           data-testid="button-export-calendar"
         >
@@ -218,7 +227,7 @@ export function CalendarView({
         </Button>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6 overflow-x-hidden">
+      <div className="grid md:grid-cols-2 gap-4 overflow-x-hidden">
         {/* Calendar */}
         <Card className="overflow-hidden">
           <CardHeader className="pb-3">
@@ -247,13 +256,11 @@ export function CalendarView({
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">
-                {format(selectedDate, "MMM d, yyyy")}
-              </CardTitle>
+              <CardTitle className="text-lg">{format(selectedDate, "MMM d, yyyy")}</CardTitle>
               <div className="flex space-x-1">
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="xs"
                   onClick={() => onCreateRehearsal?.(selectedDate)}
                   data-testid="button-add-rehearsal"
                 >
@@ -262,7 +269,7 @@ export function CalendarView({
                 </Button>
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="xs"
                   onClick={() => onCreateGig?.(selectedDate)}
                   data-testid="button-add-gig"
                 >
@@ -282,7 +289,7 @@ export function CalendarView({
                 <div className="flex space-x-2 justify-center">
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="xs"
                     onClick={() => onCreateRehearsal?.(selectedDate)}
                     data-testid="button-create-rehearsal"
                   >
@@ -291,7 +298,7 @@ export function CalendarView({
                   </Button>
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="xs"
                     onClick={() => onCreateGig?.(selectedDate)}
                     data-testid="button-create-gig"
                   >
@@ -309,7 +316,7 @@ export function CalendarView({
                     const dateB = new Date(b.data.date);
                     return dateA.getTime() - dateB.getTime();
                   })
-                  .map((event) => (
+                  .map(event => (
                     <div
                       key={`${event.type}-${event.id}`}
                       className="p-3 bg-muted rounded-lg space-y-2"
@@ -324,9 +331,7 @@ export function CalendarView({
                           )}
                           <div>
                             <div className="font-medium">{event.title}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {event.time}
-                            </div>
+                            <div className="text-sm text-muted-foreground">{event.time}</div>
                           </div>
                         </div>
                         <Badge
@@ -336,13 +341,11 @@ export function CalendarView({
                           {event.type === "rehearsal" ? "Rehearsal" : "Gig"}
                         </Badge>
                       </div>
-                      
+
                       {event.location && (
-                        <div className="text-sm text-muted-foreground">
-                          📍 {event.location}
-                        </div>
+                        <div className="text-sm text-muted-foreground">📍 {event.location}</div>
                       )}
-                      
+
                       {event.compensation && (
                         <div className="text-sm text-green-600 font-medium">
                           💰 ${event.compensation}
@@ -365,34 +368,50 @@ export function CalendarView({
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
               <div className="text-2xl font-bold text-blue-600">
-                {rehearsals.filter(r => {
-                  const date = new Date(r.date);
-                  return date.getMonth() === selectedDate.getMonth() && 
-                         date.getFullYear() === selectedDate.getFullYear();
-                }).length}
+                {
+                  rehearsals.filter(r => {
+                    const date = new Date(r.date);
+                    return (
+                      date.getMonth() === selectedDate.getMonth() &&
+                      date.getFullYear() === selectedDate.getFullYear()
+                    );
+                  }).length
+                }
               </div>
               <div className="text-sm text-muted-foreground">Rehearsals</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-green-600">
-                {gigs.filter(g => {
-                  const date = new Date(g.date);
-                  return date.getMonth() === selectedDate.getMonth() && 
-                         date.getFullYear() === selectedDate.getFullYear();
-                }).length}
+                {
+                  gigs.filter(g => {
+                    const date = new Date(g.date);
+                    return (
+                      date.getMonth() === selectedDate.getMonth() &&
+                      date.getFullYear() === selectedDate.getFullYear()
+                    );
+                  }).length
+                }
               </div>
               <div className="text-sm text-muted-foreground">Gigs</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-purple-600">
-                {new Set([...rehearsals, ...gigs].map(event => {
-                  const date = new Date(event.date);
-                  if (date.getMonth() === selectedDate.getMonth() && 
-                      date.getFullYear() === selectedDate.getFullYear()) {
-                    return format(date, "yyyy-MM-dd");
-                  }
-                  return null;
-                }).filter(Boolean)).size}
+                {
+                  new Set(
+                    [...rehearsals, ...gigs]
+                      .map(event => {
+                        const date = new Date(event.date);
+                        if (
+                          date.getMonth() === selectedDate.getMonth() &&
+                          date.getFullYear() === selectedDate.getFullYear()
+                        ) {
+                          return format(date, "yyyy-MM-dd");
+                        }
+                        return null;
+                      })
+                      .filter(Boolean)
+                  ).size
+                }
               </div>
               <div className="text-sm text-muted-foreground">Busy Days</div>
             </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Music, HelpCircle, LogOut } from "lucide-react";
+import { Music, HelpCircle, LogOut, Calendar, Mic, DollarSign, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OnboardingTutorial } from "@/components/onboarding-tutorial";
 import { RehearsalCard } from "@/components/rehearsal-card";
@@ -24,7 +24,7 @@ export default function Home() {
   const [editingRehearsal, setEditingRehearsal] = useState<RehearsalWithTasks | null>(null);
   const [editingGig, setEditingGig] = useState<Gig | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  
+
   const [onboardingCompleted, setOnboardingCompleted] = useLocalStorage(
     "soundcheck-onboarding-completed",
     false
@@ -33,7 +33,7 @@ export default function Home() {
   const {
     data: rehearsals = [],
     isLoading: rehearsalsLoading,
-    error: rehearsalsError
+    error: rehearsalsError,
   } = useQuery<RehearsalWithTasks[]>({
     queryKey: ["/api/rehearsals"],
   });
@@ -41,7 +41,7 @@ export default function Home() {
   const {
     data: gigs = [],
     isLoading: gigsLoading,
-    error: gigsError
+    error: gigsError,
   } = useQuery<Gig[]>({
     queryKey: ["/api/gigs"],
   });
@@ -84,7 +84,7 @@ export default function Home() {
 
   if (rehearsalsError || gigsError) {
     return (
-      <div className="max-w-md mx-auto bg-background min-h-screen flex items-center justify-center p-4">
+      <div className="max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl mx-auto bg-background min-h-screen flex items-center justify-center p-4">
         <div className="text-center">
           <div className="w-16 h-16 bg-destructive rounded-full flex items-center justify-center mx-auto mb-4">
             <HelpCircle className="text-destructive-foreground text-2xl" />
@@ -102,27 +102,31 @@ export default function Home() {
 
   return (
     <>
-      <div className="max-w-md mx-auto bg-background min-h-screen relative">
+      <div className="max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl mx-auto bg-background min-h-screen relative">
         {/* Header */}
         <header className="bg-card border-b border-border p-4" data-testid="header">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 stage-lighting rounded-lg flex items-center justify-center">
-                <Music className="text-white w-5 h-5" />
+                <Music className="text-primary-foreground w-5 h-5" />
               </div>
-              <h1 className="text-xl font-bold" data-testid="text-app-title">SoundCheck</h1>
+              <h1 className="text-xl font-bold" data-testid="text-app-title">
+                SoundCheck
+              </h1>
             </div>
             <div className="flex items-center space-x-3">
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setShowOnboarding(true)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="text-muted-foreground hover:text-foreground"
                 data-testid="button-help"
               >
                 <HelpCircle className="w-5 h-5" />
-              </button>
+              </Button>
               <Button
                 variant="ghost"
-                size="sm"
+                size="default"
                 onClick={async () => {
                   await supabase.auth.signOut();
                   window.location.href = "/login";
@@ -138,56 +142,60 @@ export default function Home() {
 
         {/* Tab Navigation */}
         <nav className="bg-card border-b border-border" data-testid="tab-navigation">
-          <div className="flex">
+          <div className="grid grid-cols-4 gap-4">
             <button
               onClick={() => setCurrentTab("rehearsals")}
-              className={`flex-1 py-3 px-4 text-center font-medium text-sm transition-colors ${
+              className={`min-w-0 py-3.5 px-3 md:px-4 text-center font-medium text-xs sm:text-sm transition-colors flex flex-col items-center ${
                 currentTab === "rehearsals"
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
               data-testid="tab-rehearsals"
             >
-              Rehearsals
+              <Calendar className="w-4 h-4 mb-1" />
+              <span className="text-xs sm:text-sm">Rehearsals</span>
             </button>
             <button
               onClick={() => setCurrentTab("gigs")}
-              className={`flex-1 py-3 px-4 text-center font-medium text-sm transition-colors ${
+              className={`min-w-0 py-3.5 px-3 md:px-4 text-center font-medium text-xs sm:text-sm transition-colors flex flex-col items-center ${
                 currentTab === "gigs"
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
               data-testid="tab-gigs"
             >
-              Gigs
+              <Mic className="w-4 h-4 mb-1" />
+              <span className="text-xs sm:text-sm">Gigs</span>
             </button>
             <button
               onClick={() => setCurrentTab("earnings")}
-              className={`flex-1 py-3 px-4 text-center font-medium text-sm transition-colors ${
+              className={`min-w-0 py-3.5 px-3 md:px-4 text-center font-medium text-xs sm:text-sm transition-colors flex flex-col items-center ${
                 currentTab === "earnings"
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
               data-testid="tab-earnings"
             >
-              Earnings
+              <DollarSign className="w-4 h-4 mb-1" />
+              <span className="text-xs sm:text-sm">Earnings</span>
             </button>
             <button
               onClick={() => setCurrentTab("calendar")}
-              className={`flex-1 py-3 px-4 text-center font-medium text-sm transition-colors ${
+              className={`min-w-0 py-3.5 px-3 md:px-4 text-center font-medium text-xs sm:text-sm transition-colors flex flex-col items-center ${
                 currentTab === "calendar"
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
               data-testid="tab-calendar"
             >
-              Calendar
+              <BarChart3 className="w-4 h-4 mb-1" />
+              <span className="text-xs sm:text-sm">Calendar</span>
             </button>
           </div>
         </nav>
 
         {/* Main Content */}
-        <main className="pb-20">
+        <main className="pb-24">
           {/* Rehearsals Tab */}
           {currentTab === "rehearsals" && (
             <div className="p-4 space-y-4" data-testid="rehearsals-content">
@@ -207,7 +215,7 @@ export default function Home() {
                   </p>
                 </div>
               ) : (
-                rehearsals.map((rehearsal) => (
+                rehearsals.map(rehearsal => (
                   <RehearsalCard
                     key={rehearsal.id}
                     rehearsal={rehearsal}
@@ -237,12 +245,8 @@ export default function Home() {
                   </p>
                 </div>
               ) : (
-                gigs.map((gig) => (
-                  <GigCard
-                    key={gig.id}
-                    gig={gig}
-                    onEdit={() => handleEditGig(gig)}
-                  />
+                gigs.map(gig => (
+                  <GigCard key={gig.id} gig={gig} onEdit={() => handleEditGig(gig)} />
                 ))
               )}
             </div>
@@ -277,10 +281,7 @@ export default function Home() {
       </div>
 
       {/* Modals */}
-      <OnboardingTutorial
-        open={showOnboarding}
-        onClose={handleOnboardingComplete}
-      />
+      <OnboardingTutorial open={showOnboarding} onClose={handleOnboardingComplete} />
 
       <RehearsalFormModal
         open={showRehearsalModal}

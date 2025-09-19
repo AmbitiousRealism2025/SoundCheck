@@ -45,12 +45,12 @@ export function EarningsTracker({ gigs, isLoading }: EarningsTrackerProps) {
     const yearlyMap = new Map<string, { earnings: number; count: number }>();
 
     const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     const currentYear = now.getFullYear().toString();
 
     paidGigs.forEach(gig => {
       const gigDate = new Date(gig.date);
-      const monthKey = `${gigDate.getFullYear()}-${String(gigDate.getMonth() + 1).padStart(2, '0')}`;
+      const monthKey = `${gigDate.getFullYear()}-${String(gigDate.getMonth() + 1).padStart(2, "0")}`;
       const yearKey = gigDate.getFullYear().toString();
       const gigEarnings = parseFloat(gig.compensation || "0");
 
@@ -102,25 +102,25 @@ export function EarningsTracker({ gigs, isLoading }: EarningsTrackerProps) {
   }, [gigs]);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
     }).format(amount);
   };
 
-  const formatPeriod = (period: string, type: 'month' | 'year') => {
-    if (type === 'year') return period;
-    
-    const [year, month] = period.split('-');
+  const formatPeriod = (period: string, type: "month" | "year") => {
+    if (type === "year") return period;
+
+    const [year, month] = period.split("-");
     const date = new Date(parseInt(year), parseInt(month) - 1);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    return date.toLocaleDateString("en-US", { year: "numeric", month: "short" });
   };
 
   if (isLoading) {
     return (
       <div className="space-y-4">
         <div className="animate-pulse">
-          <div className="h-6 bg-muted rounded w-32 mb-4"></div>
+          <div className="h-6 bg-muted rounded w-32 mb-6"></div>
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="h-24 bg-muted rounded"></div>
             <div className="h-24 bg-muted rounded"></div>
@@ -150,7 +150,7 @@ export function EarningsTracker({ gigs, isLoading }: EarningsTrackerProps) {
   }
 
   return (
-    <div className="space-y-6" data-testid="earnings-tracker">
+    <div className="space-y-4" data-testid="earnings-tracker">
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4">
         <Card>
@@ -162,9 +162,7 @@ export function EarningsTracker({ gigs, isLoading }: EarningsTrackerProps) {
             <div className="text-2xl font-bold" data-testid="total-earnings">
               {formatCurrency(earnings.totalEarnings)}
             </div>
-            <div className="text-xs text-muted-foreground">
-              From {earnings.totalGigs} gigs
-            </div>
+            <div className="text-xs text-muted-foreground">From {earnings.totalGigs} gigs</div>
           </CardContent>
         </Card>
 
@@ -177,9 +175,7 @@ export function EarningsTracker({ gigs, isLoading }: EarningsTrackerProps) {
             <div className="text-2xl font-bold" data-testid="average-earnings">
               {formatCurrency(earnings.averagePerGig)}
             </div>
-            <div className="text-xs text-muted-foreground">
-              Average rate
-            </div>
+            <div className="text-xs text-muted-foreground">Average rate</div>
           </CardContent>
         </Card>
       </div>
@@ -218,16 +214,16 @@ export function EarningsTracker({ gigs, isLoading }: EarningsTrackerProps) {
             <CardTitle className="text-lg">Monthly Earnings</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {earnings.monthlyEarnings.map((month) => (
+            {earnings.monthlyEarnings.map(month => (
               <div
                 key={month.period}
                 className="flex items-center justify-between p-3 bg-muted rounded-lg"
                 data-testid={`month-${month.period}`}
               >
                 <div>
-                  <div className="font-medium">{formatPeriod(month.period, 'month')}</div>
+                  <div className="font-medium">{formatPeriod(month.period, "month")}</div>
                   <div className="text-sm text-muted-foreground">
-                    {month.gigCount} gig{month.gigCount !== 1 ? 's' : ''}
+                    {month.gigCount} gig{month.gigCount !== 1 ? "s" : ""}
                   </div>
                 </div>
                 <div className="text-right">
@@ -249,7 +245,7 @@ export function EarningsTracker({ gigs, isLoading }: EarningsTrackerProps) {
             <CardTitle className="text-lg">Yearly Earnings</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {earnings.yearlyEarnings.map((year) => (
+            {earnings.yearlyEarnings.map(year => (
               <div
                 key={year.period}
                 className="flex items-center justify-between p-3 bg-muted rounded-lg"
@@ -258,7 +254,7 @@ export function EarningsTracker({ gigs, isLoading }: EarningsTrackerProps) {
                 <div>
                   <div className="font-medium">{year.period}</div>
                   <div className="text-sm text-muted-foreground">
-                    {year.gigCount} gig{year.gigCount !== 1 ? 's' : ''}
+                    {year.gigCount} gig{year.gigCount !== 1 ? "s" : ""}
                   </div>
                 </div>
                 <div className="text-right">

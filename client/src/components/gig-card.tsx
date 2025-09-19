@@ -46,10 +46,9 @@ export function GigCard({ gig, onEdit }: GigCardProps) {
     }
   };
 
-
   const formatTime = (date: Date | string | null) => {
     if (!date) return "Not set";
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    const dateObj = typeof date === "string" ? new Date(date) : date;
     return format(dateObj, "h:mm a");
   };
 
@@ -68,14 +67,12 @@ export function GigCard({ gig, onEdit }: GigCardProps) {
             </h3>
             <p className="text-sm text-muted-foreground flex items-center mt-1">
               <Calendar className="w-4 h-4 mr-1" />
-              <span data-testid={`text-gig-date-${gig.id}`}>
-                {formatDateTime(gig.date)}
-              </span>
+              <span data-testid={`text-gig-date-${gig.id}`}>{formatDateTime(gig.date)}</span>
             </p>
           </div>
           <Button
             variant="ghost"
-            size="sm"
+            size="xs"
             onClick={onEdit}
             className="text-muted-foreground hover:text-foreground"
             data-testid={`button-edit-gig-${gig.id}`}
@@ -98,7 +95,10 @@ export function GigCard({ gig, onEdit }: GigCardProps) {
             <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-1">
               Pay
             </p>
-            <p className="text-sm font-medium text-green-400" data-testid={`text-compensation-${gig.id}`}>
+            <p
+              className="text-sm font-medium text-green-400"
+              data-testid={`text-compensation-${gig.id}`}
+            >
               {formatCurrency(gig.compensation)}
             </p>
           </div>
@@ -113,13 +113,14 @@ export function GigCard({ gig, onEdit }: GigCardProps) {
             {gig.venueAddress && (
               <p className="text-sm flex items-center mb-1">
                 <MapPin className="w-4 h-4 mr-1" />
-                <span data-testid={`text-venue-address-${gig.id}`}>
-                  {gig.venueAddress}
-                </span>
+                <span data-testid={`text-venue-address-${gig.id}`}>{gig.venueAddress}</span>
               </p>
             )}
             {gig.venueContact && (
-              <p className="text-sm text-muted-foreground" data-testid={`text-venue-contact-${gig.id}`}>
+              <p
+                className="text-sm text-muted-foreground"
+                data-testid={`text-venue-contact-${gig.id}`}
+              >
                 {gig.venueContact}
               </p>
             )}
@@ -150,7 +151,8 @@ export function GigCard({ gig, onEdit }: GigCardProps) {
           </Button>
           <Button
             onClick={handleContactVenue}
-            className="flex-1 bg-secondary text-white hover:bg-secondary/90"
+            variant="secondary"
+            className="flex-1"
             data-testid={`button-contact-${gig.id}`}
           >
             <Phone className="w-4 h-4 mr-2" />

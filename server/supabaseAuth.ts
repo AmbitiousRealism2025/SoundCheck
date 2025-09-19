@@ -17,7 +17,7 @@ function validateEnvironment() {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`)
   }
 
-  console.log('Auth configured for Supabase')
+  // Auth configured for Supabase
 }
 
 validateEnvironment()
@@ -29,7 +29,7 @@ export async function setupAuth(app: any) {
   app.post('/api/auth/signup', async (req: Request, res: Response) => {
     const { email, password, firstName, lastName } = req.body
 
-    console.log('Signup request received')
+    // Process signup request
 
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -45,7 +45,6 @@ export async function setupAuth(app: any) {
       })
 
       if (error) {
-        console.log('Supabase signup error:', error.message)
         let errorMessage = error.message
 
         // Provide more user-friendly error messages
@@ -58,12 +57,12 @@ export async function setupAuth(app: any) {
         return res.status(400).json({ error: errorMessage })
       }
 
-      console.log('Signup successful')
+      // Signup successful
 
       // For development, if no session was created (email confirmation required),
       // manually confirm the user and create a session
       if (!data.session && data.user) {
-        console.log('Manually confirming user for development...')
+        // Manually confirming user for development
 
         try {
           // Use admin client to confirm email
@@ -83,9 +82,9 @@ export async function setupAuth(app: any) {
           )
 
           if (updateError) {
-            console.log('Failed to auto-confirm email:', updateError.message)
+            // Failed to auto-confirm email
           } else {
-            console.log('Email auto-confirmed successfully')
+            // Email auto-confirmed successfully
 
             // Now try to sign in
             const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
@@ -94,7 +93,6 @@ export async function setupAuth(app: any) {
             })
 
             if (!signInError && signInData.session) {
-              console.log('Auto-signin successful')
               return res.json({
                 message: 'Signup successful',
                 user: signInData.user,
@@ -103,7 +101,7 @@ export async function setupAuth(app: any) {
             }
           }
         } catch (error) {
-          console.log('Auto-confirmation failed')
+          // Auto-confirmation failed
         }
 
         // Return the original signup response
@@ -120,7 +118,6 @@ export async function setupAuth(app: any) {
         session: data.session
       })
     } catch (error) {
-      console.log('Server error during signup')
       res.status(500).json({ error: 'Internal server error' })
     }
   })
@@ -199,7 +196,6 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     authReq.user = user
     return next()
   } catch (error) {
-    console.error('Authentication error:', error)
     return res.status(401).json({ message: "Authentication failed" })
   }
 }
